@@ -1,2 +1,4 @@
-# Long_Distance_Relationship_Display
+# Connect Box
+
+A box that connects two over a long distance.
 
