@@ -66,11 +66,20 @@ void setup() {
 }
 
 void loop() {
-    // Ein simpler Herzschlag-Monitor im Code
-    digitalWrite(STATUS_LED, HIGH);
-    Serial.println("System Status: OK (Heartbeat gesendet)");
-    delay(1000);
+    static int counter = 0;
+    char buffer[10];
+    sprintf(buffer, "%d", counter++);
 
-    digitalWrite(STATUS_LED, LOW);
-    delay(4000); // Alle 5 Sekunden blinken
+    Serial.println("Starte Partial Update...");
+
+    display.setPartialWindow(100, 200, 100, 50);
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+        display.setCursor(110, 240);
+        display.setTextColor(GxEPD_BLACK);
+        display.print(buffer);
+    } while (display.nextPage());
+
+    delay(5000);
 }
