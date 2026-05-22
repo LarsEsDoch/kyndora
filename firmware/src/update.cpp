@@ -11,7 +11,7 @@ UpdateManager::UpdateManager(const String& version, const int& checkUpdateHour) 
 }
 
 bool UpdateManager::isWiFiConnected() {
-    return (WiFi.status() == WL_CONNECTED);
+    return (WiFiClass::status() == WL_CONNECTED);
 }
 
 void UpdateManager::automaticCheckForUpdates() {
@@ -20,7 +20,7 @@ void UpdateManager::automaticCheckForUpdates() {
         return;
     }
 
-    if (timeInfo.tm_hour == updateHour && timeInfo.tm_min == 0) {
+    if (timeInfo.tm_hour >= updateHour) {
         if (lastCheckDay != timeInfo.tm_mday) {
             lastCheckDay = timeInfo.tm_mday;
 
@@ -42,7 +42,6 @@ void UpdateManager::checkForUpdates() {
     client.setInsecure();
 
     HTTPClient http;
-
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
     const auto githubApiUrl = "https://api.github.com/repos/LarsEsDoch/kyndora/releases/latest";
@@ -50,16 +49,16 @@ void UpdateManager::checkForUpdates() {
     if (http.begin(client, githubApiUrl)) {
         http.addHeader("User-Agent", "KYNDORA-OTA-Client");
 
-        int httpCode = http.GET();
+        const int httpCode = http.GET();
 
         if (httpCode == HTTP_CODE_OK) {
-            String payload = http.getString();
+            const String payload = http.getString();
 
-            int tagIndex = payload.indexOf("\"tag_name\":\"");
+            const int tagIndex = payload.indexOf(R"("tag_name":")");
             if (tagIndex != -1) {
-                int tagStart = tagIndex + 12;
-                int tagEnd = payload.indexOf("\"", tagStart);
-                String latestVersion = payload.substring(tagStart, tagEnd);
+                const int tagStart = tagIndex + 12;
+                const int tagEnd = payload.indexOf("\"", tagStart);
+                const String latestVersion = payload.substring(tagStart, tagEnd);
 
                 Serial.println("Installed Version: " + currentVersion);
                 Serial.println("Latest GitHub Version: " + latestVersion);
@@ -67,11 +66,11 @@ void UpdateManager::checkForUpdates() {
                 if (latestVersion != currentVersion) {
                     Serial.println("New version found! Getting download link...");
 
-                    const int urlIndex = payload.indexOf("\"browser_download_url\":\"");
+                    const int urlIndex = payload.indexOf(R"("browser_download_url":")");
                     if (urlIndex != -1) {
-                        int urlStart = urlIndex + 24;
-                        int urlEnd = payload.indexOf("\"", urlStart);
-                        String url = payload.substring(urlStart, urlEnd);
+                        const int urlStart = urlIndex + 24;
+                        const int urlEnd = payload.indexOf("\"", urlStart);
+                        const String url = payload.substring(urlStart, urlEnd);
 
                         Serial.println("Download URL: " + url);
                         downloadUrl = url;
@@ -90,6 +89,8 @@ void UpdateManager::checkForUpdates() {
 }
 
 void UpdateManager::executeOTA() {
+    if (downloadUrl.length() == 0) return;
+
     WiFiClientSecure downloadClient;
     downloadClient.setInsecure();
 
@@ -100,27 +101,25 @@ void UpdateManager::executeOTA() {
 
     if (http.begin(downloadClient, downloadUrl)) {
         http.addHeader("User-Agent", "ESP32-OTA-Client");
-        int httpCode = http.GET();
+        const int httpCode = http.GET();
 
         if (httpCode == HTTP_CODE_OK) {
-            int contentLength = http.getSize();
+            const int contentLength = http.getSize();
             Serial.printf("File size: %d Bytes\n", contentLength);
 
-            bool canBegin = Update.begin(contentLength);
-
-            if (canBegin) {
+            if (Update.begin(contentLength)) {
                 Serial.println("Flashing started. Please do not turn off the box...");
 
-                //TODO Add waiting screen
+                // TODO: Hier kannst du später deine Display-Wartemeldung einblenden!
 
-                WiFiClient* stream = http.getStreamPtr();
+                WiFiClient& stream = http.getStream();
 
-                size_t written = Update.writeStream(*stream);
+                const size_t written = Update.writeStream(stream);
 
                 if (written == contentLength) {
                     Serial.println("Written: " + String(written) + " successfully");
                 } else {
-                    Serial.println("Written only: " + String(written) + "/" + String(contentLength) + ". Retry?" );
+                    Serial.println("Written only: " + String(written) + "/" + String(contentLength) + ". Flash aborted.");
                 }
 
                 if (Update.end()) {
@@ -128,6 +127,7 @@ void UpdateManager::executeOTA() {
                     if (Update.isFinished()) {
                         downloadUrl = "";
                         Serial.println("Update complete. Restarting...");
+                        delay(1000);
                         ESP.restart();
                     } else {
                         Serial.println("Update not completed. Failed.");
@@ -136,7 +136,7 @@ void UpdateManager::executeOTA() {
                     Serial.printf("An error occurred: #%d\n", Update.getError());
                 }
             } else {
-              Serial.println("Not enough space in the flash memory for the update.");
+                Serial.println("Not enough space in the flash memory for the update.");
             }
         } else {
             Serial.printf("Download failed, HTTP code: %d\n", httpCode);
