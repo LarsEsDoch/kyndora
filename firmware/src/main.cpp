@@ -6,6 +6,7 @@
 #include "gdey/GxEPD2_420_GDEY042T81.h"
 #include <GxEPD2_BW.h>
 #include "update.hpp"
+#include "secrets.h"
 
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
@@ -14,9 +15,6 @@
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
-const char* ssid     = "***REMOVED***";
-const char* password = "***REMOVED***";
-
 auto ntpServer = "pool.ntp.org";
 auto timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
@@ -24,9 +22,9 @@ uint32_t lastTimeSeconds = 0;
 uint32_t lastTimeMinutes = 0;
 uint32_t lastTimeHours   = 0;
 
-const uint32_t intervalSecond = 1000;
-const uint32_t intervalMinute = 60000;
-const uint32_t intervalHour   = 3600000;
+constexpr uint32_t intervalSecond = 1000;
+constexpr uint32_t intervalMinute = 60000;
+constexpr uint32_t intervalHour   = 3600000;
 
 const String currentVersion = "v0.0.0";
 
@@ -49,8 +47,8 @@ void setup() {
     display.setFont(&FreeSansBold24pt7b);
 
     Serial.print("Connect with ");
-    Serial.println(ssid);
-    WiFi.begin(ssid, password);
+    Serial.println(WIFI_SSID);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     while (WiFiClass::status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
