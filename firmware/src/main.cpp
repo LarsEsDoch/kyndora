@@ -20,6 +20,14 @@ const char* password = "***REMOVED***";
 auto ntpServer = "pool.ntp.org";
 auto timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
+uint32_t lastTimeSeconds = 0;
+uint32_t lastTimeMinutes = 0;
+uint32_t lastTimeHours   = 0;
+
+const uint32_t intervalSecond = 1000;
+const uint32_t intervalMinute = 60000;
+const uint32_t intervalHour   = 3600000;
+
 const String currentVersion = "v0.0.0";
 
 UpdateManager updater(currentVersion, 3);
@@ -66,7 +74,23 @@ void setup() {
 }
 
 void loop() {
-    updater.automaticCheckForUpdates();
+    uint32_t now = millis();
+
+    if (now - lastTimeSeconds >= intervalSecond) {
+        lastTimeSeconds = now;
+
+    }
+
+    if (now - lastTimeMinutes >= intervalMinute) {
+        lastTimeMinutes = now;
+
+        updater.automaticCheckForUpdates();
+    }
+
+    if (now - lastTimeHours >= intervalHour) {
+        lastTimeHours = now;
+
+    }
 
     tm timeInfo{};
     if (!getLocalTime(&timeInfo)) {
