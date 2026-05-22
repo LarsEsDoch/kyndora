@@ -90,4 +90,57 @@ void UpdateManager::checkForUpdates() {
 }
 
 void UpdateManager::executeOTA() {
+    WiFiClientSecure downloadClient;
+    downloadClient.setInsecure();
+
+    HTTPClient http;
+    http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
+    Serial.println("Starting firmware download...");
+
+    if (http.begin(downloadClient, downloadUrl)) {
+        http.addHeader("User-Agent", "ESP32-OTA-Client");
+        int httpCode = http.GET();
+
+        if (httpCode == HTTP_CODE_OK) {
+            int contentLength = http.getSize();
+            Serial.printf("File size: %d Bytes\n", contentLength);
+
+            bool canBegin = Update.begin(contentLength);
+
+            if (canBegin) {
+                Serial.println("Flashing started. Please do not turn off the box...");
+
+                //TODO Add waiting screen
+
+                WiFiClient* stream = http.getStreamPtr();
+
+                size_t written = Update.writeStream(*stream);
+
+                if (written == contentLength) {
+                    Serial.println("Written: " + String(written) + " successfully");
+                } else {
+                    Serial.println("Written only: " + String(written) + "/" + String(contentLength) + ". Retry?" );
+                }
+
+                if (Update.end()) {
+                    Serial.println("OTA successfully completed!");
+                    if (Update.isFinished()) {
+                        downloadUrl = "";
+                        Serial.println("Update complete. Restarting...");
+                        ESP.restart();
+                    } else {
+                        Serial.println("Update not completed. Failed.");
+                    }
+                } else {
+                    Serial.printf("An error occurred: #%d\n", Update.getError());
+                }
+            } else {
+              Serial.println("Not enough space in the flash memory for the update.");
+            }
+        } else {
+            Serial.printf("Download failed, HTTP code: %d\n", httpCode);
+        }
+        http.end();
+    }
 }
