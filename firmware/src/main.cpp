@@ -5,6 +5,7 @@
 #include <Fonts/FreeSansBold24pt7b.h>
 #include "gdey/GxEPD2_420_GDEY042T81.h"
 #include <GxEPD2_BW.h>
+#include "update.hpp"
 
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
@@ -26,8 +27,8 @@ UpdateManager updater(currentVersion, 3);
 GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(
     GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY));
 
-int letzteMinute = -1;
-unsigned long letzteNTPUpdate = 0;
+int lastMinute = -1;
+unsigned long lastNTPUpdate = 0;
 
 void setup() {
     Serial.begin(115200);
@@ -39,24 +40,24 @@ void setup() {
     display.setTextColor(GxEPD_BLACK);
     display.setFont(&FreeSansBold24pt7b);
 
-    Serial.print("Verbinde mit ");
+    Serial.print("Connect with ");
     Serial.println(ssid);
     WiFi.begin(ssid, password);
     while (WiFiClass::status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
-    Serial.println("\nWLAN verbunden!");
+    Serial.println("\nWi-Fi connected!");
 
     configTzTime(timeZone, ntpServer);
-    Serial.println("Warte auf NTP-Zeitsynchronisation...");
+    Serial.println("Waiting for NTP time synchronization...");
 
     tm timeInfo{};
     while (!getLocalTime(&timeInfo)) {
         delay(500);
         Serial.print(".");
     }
-    Serial.println("\nZeit erfolgreich synchronisiert.");
+    Serial.println("\nTime successfully synchronized.");
 
     display.firstPage();
     do {
@@ -65,14 +66,16 @@ void setup() {
 }
 
 void loop() {
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        Serial.println("Fehler beim Abrufen der lokalen Zeit");
-        delay(1000);
+    updater.automaticCheckForUpdates();
+
+    tm timeInfo{};
+    if (!getLocalTime(&timeInfo)) {
+        delay(100);
         return;
     }
 
-    if (timeinfo.tm_sec != letzteMinute) {
+    if (timeInfo.tm_min != lastMinute) {
+        lastMinute = timeInfo.tm_min;
 
         char zeitString[9];
         sprintf(zeitString, "%02d:%02d:%02d", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
