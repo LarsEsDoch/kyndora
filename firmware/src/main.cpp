@@ -16,8 +16,12 @@
 const char* ssid     = "***REMOVED***";
 const char* password = "***REMOVED***";
 
-const char* ntpServer = "pool.ntp.org";
-const char* timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
+auto ntpServer = "pool.ntp.org";
+auto timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
+
+const String currentVersion = "v0.0.0";
+
+UpdateManager updater(currentVersion, 3);
 
 GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(
     GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY));
@@ -38,7 +42,7 @@ void setup() {
     Serial.print("Verbinde mit ");
     Serial.println(ssid);
     WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
+    while (WiFiClass::status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
     }
@@ -47,8 +51,8 @@ void setup() {
     configTzTime(timeZone, ntpServer);
     Serial.println("Warte auf NTP-Zeitsynchronisation...");
 
-    struct tm timeinfo;
-    while (!getLocalTime(&timeinfo)) {
+    tm timeInfo{};
+    while (!getLocalTime(&timeInfo)) {
         delay(500);
         Serial.print(".");
     }
@@ -69,17 +73,14 @@ void loop() {
     }
 
     if (timeinfo.tm_sec != letzteMinute) {
-        letzteMinute = timeinfo.tm_sec;
 
         char zeitString[9];
-        sprintf(zeitString, "%02d:%02d:%02d", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-        Serial.print("Aktualisiere Uhrzeit auf: ");
-        Serial.println(zeitString);
+        sprintf(zeitString, "%02d:%02d:%02d", timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
 
-        uint16_t box_x = 50;
-        uint16_t box_y = 140;
-        uint16_t box_w = 240;
-        uint16_t box_h = 80;
+        constexpr uint16_t box_x = 50;
+        constexpr uint16_t box_y = 140;
+        constexpr uint16_t box_w = 240;
+        constexpr uint16_t box_h = 80;
 
         display.setPartialWindow(box_x, box_y, box_w, box_h);
         display.firstPage();
@@ -90,9 +91,10 @@ void loop() {
             display.print(zeitString);
         } while (display.nextPage());
 
-        if (timeinfo.tm_min == 0) {
+        if (timeInfo.tm_hour == 0) {
             display.init(0, false, 2, false);
         }
+        delay(500);
     }
 
     delay(100);
