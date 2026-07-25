@@ -1,6 +1,8 @@
 from typing import Optional
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field
+from datetime import datetime, timezone
+
 
 class User(SQLModel, table=True):
     __tablename__ = "users"
@@ -17,3 +19,15 @@ class Device(SQLModel, table=True):
     mac_address: str = Field(primary_key=True)
     user_id: UUID = Field(foreign_key="users.id")
     firmware_version: Optional[str] = None
+
+
+class ContentFeed(SQLModel, table=True):
+    __tablename__ = "content_feed"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sender_id: UUID = Field(foreign_key="users.id")
+    receiver_id: UUID = Field(foreign_key="users.id")
+    content_type: str
+    payload: str
+    is_displayed: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
