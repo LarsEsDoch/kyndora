@@ -17,26 +17,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     except Exception:
         return False
 
-
 load_dotenv()
 
 SECRET_KEY = os.getenv("JWT_SECRET", "te!Lm&88%Ppc4YtziIW@%o!ZYxgvzVMp")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 30
 
-
 def create_access_token(data: dict):
     to_encode = data.copy()
-
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
     to_encode.update({"exp": expire})
-
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     credentials_exception = HTTPException(
