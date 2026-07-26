@@ -1,4 +1,4 @@
-package dev.lars.mobile_app
+package dev.lars.kyndora
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,4 +1,4 @@
-# mobile_app
+# Kyndora
 
 The offical Kyndora App
 
