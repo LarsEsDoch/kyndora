@@ -7,7 +7,7 @@ from models import User
 from schemas import UserCreate, Token
 from security import get_password_hash, verify_password, create_access_token, get_current_user_id
 
-router = APIRouter(prefix="/auth", tags=["Authentifizierung"])
+router = APIRouter(prefix="/auth", tags=["Authentification"])
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate, session: Session = Depends(get_session)):
