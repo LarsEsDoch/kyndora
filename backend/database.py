@@ -6,7 +6,7 @@ load_dotenv()
 
 DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@192.168.178.33:5432/connect_box"
 
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(DB_URL)
 
 def get_session():
     with Session(engine) as session:
