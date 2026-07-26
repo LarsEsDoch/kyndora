@@ -15,6 +15,15 @@ class DeviceRegisterRequest(BaseModel):
     mac_address: str
     ticket_token: str
 
+@router.get("")
+def list_user_devices(
+        session: Session = Depends(get_session),
+        current_user=Depends(get_current_user_id)
+):
+    statement = select(Device).where(Device.user_id == current_user)
+    devices = session.exec(statement).all()
+
+    return devices
 
 @router.post("/ticket", status_code=201)
 def generate_provisioning_ticket(
