@@ -1,7 +1,5 @@
 #pragma once
 
-#include <WiFiClientSecure.h>
-
 class UpdateManager {
 public:
     explicit UpdateManager(const String& version, const int& checkUpdateHour);
