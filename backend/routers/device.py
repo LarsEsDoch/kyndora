@@ -53,7 +53,11 @@ def register_device(
     if not ticket:
         raise HTTPException(status_code=404, detail="Invalid provisioning ticket")
 
-    if ticket.expires_at < datetime.now(timezone.utc):
+    expires_at = ticket.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    if expires_at < datetime.now(timezone.utc):
         session.delete(ticket)
         session.commit()
         raise HTTPException(status_code=400, detail="Ticket has expired")
