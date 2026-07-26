@@ -352,9 +352,35 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
         }
       }
 
-      setState(() => _statusMessage = "Data sent. ESP32 is registering...");
-      await Future.delayed(const Duration(seconds: 1));
+      setState(() => _statusMessage = "Data sent to Kyndora. Finalizing...");
+
+      await Future.delayed(const Duration(seconds: 3));
+
       await kyndoraDevice!.disconnect();
+
+      setState(() {
+        _isProcessing = false;
+        _statusMessage = "Provisioning successful!";
+      });
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Success!"),
+            content: const Text("Kyndora is provisioned and connecting to Wi-Fi."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
 
     } catch (e) {
       setState(() => _statusMessage = "Error: $e");
