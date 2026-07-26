@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MQTT_BROKER = "192.168.178.9"
+MQTT_BROKER = "192.168.178.33"
 MQTT_PORT = 1883
 
 client = mqtt.Client(client_id="kyndora_backend")
