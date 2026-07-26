@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from mqtt_client import connect_mqtt
 
-from routers import auth, doodles
+from routers import auth, doodles, device
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,6 +13,7 @@ app = FastAPI(title="Kyndora API", lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(doodles.router)
+app.include_router(device.router)
 
 @app.get("/")
 def read_root():
