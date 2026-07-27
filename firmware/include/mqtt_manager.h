@@ -19,7 +19,9 @@ private:
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;
+    unsigned long _lastTelemetry = 0;
     const unsigned long HEARTBEAT_INTERVAL = 60000;
+    const unsigned long TELEMETRY_INTERVAL = 3600000;
 
     const String FW_VERSION = "0.1.0";
 };

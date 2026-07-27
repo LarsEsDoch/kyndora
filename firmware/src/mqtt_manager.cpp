@@ -22,6 +22,7 @@ void MqttManager::connect() {
         Serial.println("connected!");
 
         publishHeartbeat();
+        sendTelemetry();
 
         // String subTopic = "kyndora/" + _deviceId + "/doodle";
         // mqttClient.subscribe(subTopic.c_str());
@@ -51,15 +52,27 @@ void MqttManager::publishHeartbeat() {
 }
 
 void MqttManager::sendTelemetry() {
-    String topic = "kyndora/" + _deviceId + "/telemetry";
-    
-    String payload = "{";
-    payload += "\"rssi\": " + String(WiFi.RSSI()) + ",";
-    payload += "\"uptime\": " + String(millis() / 1000);
-    payload += "}";
+    if (!mqttClient.connected()) return;
 
-    if (mqttClient.publish(topic.c_str(), payload.c_str())) {
-        Serial.println("Telemetry sent successfully!");
+    JsonDocument doc;
+
+    doc["rssi"] = WiFi.RSSI();
+    doc["ssid"] = WiFi.SSID();
+
+    doc["uptime_s"] = millis() / 1000;
+    doc["free_heap"] = ESP.getFreeHeap();
+    doc["core_temp"] = temperatureRead();
+
+    doc["battery_v"] = 3.9;
+    doc["battery_percent"] = 85;
+
+    char buffer[512];
+    serializeJson(doc, buffer);
+
+    String topic = "kyndora/" + _deviceId + "/telemetry";
+
+    if (mqttClient.publish(topic.c_str(), buffer)) {
+        Serial.println("Telemetry sent: " + String(buffer));
     } else {
         Serial.println("Failed to send telemetry.");
     }
@@ -81,6 +94,10 @@ void MqttManager::handle() {
         if (now - _lastHeartbeat > HEARTBEAT_INTERVAL) {
             _lastHeartbeat = now;
             publishHeartbeat();
+        }
+        if (now - _lastTelemetry > TELEMETRY_INTERVAL) {
+            _lastTelemetry = now;
+            sendTelemetry();
         }
     }
 }
