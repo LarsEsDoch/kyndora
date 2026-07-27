@@ -7,6 +7,7 @@
 #include <GxEPD2_BW.h>
 #include "update.hpp"
 #include "provisioning.hpp"
+#include "mqtt_manager.h"
 
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
@@ -25,6 +26,8 @@ const String currentVersion = "v0.0.0";
 UpdateManager updater(currentVersion, 3);
 GxEPD2_BW<GxEPD2_420_GDEY042T81, GxEPD2_420_GDEY042T81::HEIGHT> display(
     GxEPD2_420_GDEY042T81(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY));
+
+MqttManager mqttManager;
 
 int lastMinute = -1;
 
@@ -54,6 +57,19 @@ void setup() {
         do {
             display.fillScreen(GxEPD_WHITE);
         } while (display.nextPage());
+
+        Preferences preferences;
+        preferences.begin("kyndora", true);
+        String mqttUser = preferences.getString("mqtt_user", "");
+        String mqttPass = preferences.getString("mqtt_pass", "");
+        preferences.end();
+
+        String deviceId = WiFi.macAddress();
+        deviceId.replace(":", "");
+
+        const char* brokerIp = "192.168.178.33";
+
+        mqttManager.begin(deviceId, mqttUser, mqttPass, brokerIp);
     } else {
         display.firstPage();
         do {
@@ -70,6 +86,8 @@ void loop() {
     ProvisioningManager::handle();
 
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
+
+        mqttManager.handle();
 
         if (now - lastTimeMinutes >= intervalMinute) {
             lastTimeMinutes = now;
