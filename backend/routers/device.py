@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from database import get_session
-from models import Device, ProvisioningTicket
+from models import Device, ProvisioningTicket, Telemetry
 from security import get_current_user_id, create_access_token
 
 router = APIRouter(prefix="/api/device", tags=["Device Provisioning"])
@@ -68,6 +68,10 @@ def register_device(
     if not device:
         device = Device(mac_address=request.mac_address, user_id=ticket.user_id)
         session.add(device)
+        session.flush()
+
+        telemetry = Telemetry(device_mac=request.mac_address)
+        session.add(telemetry)
     else:
         device.user_id = ticket.user_id
 
