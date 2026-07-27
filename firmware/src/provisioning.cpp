@@ -142,7 +142,7 @@ void ProvisioningManager::handle() {
         Serial.print("Connecting to new Wi-Fi");
 
         int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        while (WiFi.status() != WL_CONNECTED && attempts < 30) {
             delay(500);
             Serial.print(".");
             attempts++;

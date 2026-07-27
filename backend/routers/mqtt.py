@@ -35,8 +35,6 @@ def authenticate_mqtt_client(request: MqttAuthRequest, response: Response):
     if username == "admin" and token == os.getenv('MQTT_PASSWORD'):
         return {"ok": True}
 
-    print(token)
-
     try:
         payload = jwt.decode(token, secret, algorithms=["HS256"])
         sub = payload.get("sub", "")
