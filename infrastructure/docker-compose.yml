@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: connect_db
+    container_name: kyndora_db
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -17,22 +17,21 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - connect_net
+      - kyndora_net
 
   mqtt:
-    image: eclipse-mosquitto:2.0
-    container_name: connect_mqtt
+    image: iegomez/mosquitto-go-auth:latest
+    container_name: kyndora_mqtt
     restart: unless-stopped
     ports:
       - "1883:1883"
       - "8883:8883"
     volumes:
-      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/config/mosquitto.conf:/etc/mosquitto/mosquitto.conf
       - ./mosquitto/data:/mosquitto/data
-      - ./mosquitto/log:/mosquitto/log
     networks:
-      - connect_net
+      - kyndora_net
 
 networks:
-  connect_net:
+  kyndora_net:
     driver: bridge
