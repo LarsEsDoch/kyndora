@@ -4,6 +4,7 @@ from mqtt_client import connect_mqtt
 from database import create_db_and_tables
 
 from routers import auth, doodles, device, mqtt
+from services.mqtt_worker import init_mqtt_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -11,6 +12,8 @@ async def lifespan(app: FastAPI):
     create_db_and_tables()
     print("Starting MQTT Client.")
     connect_mqtt()
+    print("Starting MQTT Worker.")
+    init_mqtt_worker()
     yield
 
 app = FastAPI(title="Kyndora API", lifespan=lifespan)
