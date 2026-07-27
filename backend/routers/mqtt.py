@@ -56,9 +56,14 @@ def authenticate_mqtt_client(request: MqttAuthRequest, response: Response):
 def authorize_mqtt_topic(request: MqttAclRequest, response: Response):
     topic = request.topic or ""
     clientid = request.clientid or ""
+    username = request.username or ""
 
-    if request.username == "admin" or clientid.upper() in topic.upper() or "kyndora/" in topic:
+    if username == "admin":
         return {"ok": True}
+
+    if clientid and clientid.upper() in topic.upper():
+        if topic.startswith("kyndora/"):
+            return {"ok": True}
 
     response.status_code = status.HTTP_401_UNAUTHORIZED
     return {"ok": False}
