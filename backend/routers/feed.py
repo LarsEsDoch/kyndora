@@ -13,6 +13,11 @@ MQTT_BROKER = "192.168.178.33"
 MQTT_PORT = 1883
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', 'admin123')
 
+def format_mac(mac: str) -> str:
+    if len(mac) == 12 and ":" not in mac:
+        return ":".join(mac[i:i + 2] for i in range(0, 12, 2)).upper()
+    return mac.upper()
+
 @router.post("/")
 def send_content(
     content_type: str,
@@ -38,7 +43,7 @@ def send_content(
     ).first()
 
     if partner_device:
-        topic = f"kyndora/{partner_device.mac_address}/content"
+        topic = f"kyndora/{partner_device.mac_address.replace(":", "").upper()}/content"
         trigger_msg = json.dumps({"action": "fetch_new"})
 
         try:
@@ -54,3 +59,37 @@ def send_content(
             print(f"Fehler beim MQTT Ping: {e}")
 
     return {"status": "success", "message": "Content saved and partner notified."}
+
+@router.get("/device/{mac_address}/latest")
+def get_latest_content_for_device(
+    mac_address: str,
+    session: Session = Depends(get_session)
+):
+    clean_mac = format_mac(mac_address)
+    device = session.get(Device, clean_mac)
+    if not device or not device.user_id:
+        raise HTTPException(status_code=4404, detail="Device or owner not found")
+
+    statement = (
+        select(ContentFeed)
+        .where(
+            ContentFeed.receiver_id == device.user_id,
+            ContentFeed.is_displayed == False
+        )
+        .order_by(ContentFeed.created_at.desc())
+    )
+    content_item = session.exec(statement).first()
+
+    if not content_item:
+        return {"has_new": False}
+
+    content_item.is_displayed = True
+    session.add(content_item)
+    session.commit()
+
+    return {
+        "has_new": True,
+        "id": content_item.id,
+        "type": content_item.content_type,
+        "payload": content_item.payload
+    }
