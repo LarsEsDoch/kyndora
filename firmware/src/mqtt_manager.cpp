@@ -5,6 +5,13 @@
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
+MqttManager* globalMqttInstance = nullptr;
+
+void globalMqttCallback(char* topic, byte* payload, unsigned int length) {
+    if (globalMqttInstance != nullptr) {
+        globalMqttInstance->handleCallback(topic, payload, length);
+    }
+}
 
 void MqttManager::begin(const String& deviceId, const String& mqttUser, const String& mqttPass, const char* brokerIp) {
     _deviceId = deviceId;
@@ -12,25 +19,41 @@ void MqttManager::begin(const String& deviceId, const String& mqttUser, const St
     _mqttPass = mqttPass;
     _brokerIp = brokerIp;
 
+    globalMqttInstance = this;
+    mqttClient.setBufferSize(1024);
     mqttClient.setServer(_brokerIp, 1883);
+    mqttClient.setCallback(globalMqttCallback);
 }
 
 void MqttManager::connect() {
     Serial.print("Attempting MQTT connection...");
 
-    if (mqttClient.connect(_deviceId.c_str(), _mqttUser.c_str(), _mqttPass.c_str())) {
-        Serial.println("connected!");
+    String statusTopic = "kyndora/" + _deviceId + "/status";
+    String commandTopic = "kyndora/" + _deviceId + "/commands";
+
+    if (mqttClient.connect(_deviceId.c_str(),
+                           _mqttUser.c_str(),
+                           _mqttPass.c_str(),
+                           statusTopic.c_str(),
+                           1,
+                           true,
+                           "offline")) {
+
+        Serial.println(" connected!");
+
+        mqttClient.loop();
+
+        mqttClient.publish(statusTopic.c_str(), "online", true);
+
+        mqttClient.subscribe(commandTopic.c_str());
 
         publishHeartbeat();
         sendTelemetry();
-
-        // String subTopic = "kyndora/" + _deviceId + "/doodle";
-        // mqttClient.subscribe(subTopic.c_str());
-    } else {
-        Serial.print("failed, rc=");
-        Serial.print(mqttClient.state());
-        Serial.println(" try again in 5 seconds");
-    }
+                           } else {
+                               Serial.print("failed, rc=");
+                               Serial.print(mqttClient.state());
+                               Serial.println(" - try again in 5 seconds");
+                           }
 }
 
 void MqttManager::publishHeartbeat() {

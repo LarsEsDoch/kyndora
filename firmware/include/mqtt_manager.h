@@ -7,6 +7,7 @@ public:
 
     void handle();
 
+    void handleCallback(char* topic, byte* payload, unsigned int length);
 private:
     void connect();
     void publishHeartbeat();
