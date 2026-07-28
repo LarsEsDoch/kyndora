@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from mqtt_client import connect_mqtt
 from database import create_db_and_tables
 
-from routers import auth, doodles, device, mqtt
+from routers import auth, doodles, device, mqtt, partners
 from services.mqtt_worker import init_mqtt_worker
 
 @asynccontextmanager
@@ -22,6 +22,7 @@ app.include_router(auth.router)
 app.include_router(doodles.router)
 app.include_router(device.router)
 app.include_router(mqtt.router)
+app.include_router(partners.router)
 
 @app.get("/")
 def read_root():

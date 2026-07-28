@@ -28,6 +28,14 @@ class ProvisioningTicket(SQLModel, table=True):
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(minutes=15)
     )
 
+class PartnerRequest(SQLModel, table=True):
+    __tablename__ = "partner_requests"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    sender_id: UUID = Field(foreign_key="users.id")
+    receiver_id: UUID = Field(foreign_key="users.id")
+    status: str = Field(default="pending")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class ContentFeed(SQLModel, table=True):
     __tablename__ = "content_feed"
     id: Optional[int] = Field(default=None, primary_key=True)
