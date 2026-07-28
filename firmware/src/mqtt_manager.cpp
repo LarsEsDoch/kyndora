@@ -3,6 +3,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -143,7 +144,21 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
     String expectedContentTopic = "kyndora/" + _deviceId + "/content";
 
     if (String(topic) == expectedCommandTopic) {
-        if (message == "restart") {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, message);
+
+        if (!error && doc["command"] == "set_timezone") {
+            String newTz = doc["tz"].as<String>();
+
+            Preferences prefs;
+            prefs.begin("kyndora", false);
+            prefs.putString("timezone", newTz);
+            prefs.end();
+
+            configTzTime(newTz.c_str(), "pool.ntp.org");
+            Serial.println("Timezone succesful updated!");
+        }
+        else if (message == "restart") {
             Serial.println("Received command: Restart in 3 seconds...");
             delay(3000);
             ESP.restart();

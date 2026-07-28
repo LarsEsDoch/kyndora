@@ -17,7 +17,7 @@
 #define PIN_EPD_MOSI  11
 
 auto ntpServer = "pool.ntp.org";
-auto timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
+String timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 uint32_t lastTimeMinutes = 0;
 constexpr uint32_t intervalMinute = 60000;
@@ -45,8 +45,15 @@ void setup() {
     ProvisioningManager::begin();
 
     if (ProvisioningManager::isProvisioned()) {
-        configTzTime(timeZone, ntpServer);
-        Serial.println("Waiting for NTP time synchronization...");
+        Preferences preferences;
+        preferences.begin("kyndora", true);
+        timeZone = preferences.getString("timezone", "CET-1CEST,M3.5.0,M10.5.0/3");
+        String mqttUser = preferences.getString("mqtt_user", "");
+        String mqttPass = preferences.getString("mqtt_pass", "");
+        preferences.end();
+
+        configTzTime(timeZone.c_str(), ntpServer);
+        Serial.println("Waiting for NTP time synchronization with TZ: " + timeZone + " ...");
 
         tm timeInfo{};
         while (!getLocalTime(&timeInfo)) {
@@ -60,11 +67,6 @@ void setup() {
             display.fillScreen(GxEPD_WHITE);
         } while (display.nextPage());
 
-        Preferences preferences;
-        preferences.begin("kyndora", true);
-        String mqttUser = preferences.getString("mqtt_user", "");
-        String mqttPass = preferences.getString("mqtt_pass", "");
-        preferences.end();
 
         String deviceId = WiFi.macAddress();
         deviceId.replace(":", "");
@@ -117,7 +119,7 @@ void loop() {
                     display.setCursor(msg_x + 5, msg_y + 20);
                     display.print("Partner: " + currentDisplayMessage);
                 } while (display.nextPage());
-                
+
                 display.setFont(&FreeSansBold24pt7b);
             }
         }
