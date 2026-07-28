@@ -124,3 +124,28 @@ void MqttManager::handle() {
         }
     }
 }
+
+void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length) {
+    String message = "";
+    for (unsigned int i = 0; i < length; i++) {
+        message += (char)payload[i];
+    }
+
+    Serial.print("Message received on Topic: ");
+    Serial.println(topic);
+    Serial.print("Payload: ");
+    Serial.println(message);
+
+    String expectedCommandTopic = "kyndora/" + _deviceId + "/commands";
+
+    if (String(topic) == expectedCommandTopic) {
+        if (message == "restart") {
+            Serial.println("Received command: Restart in 3 seconds...");
+            delay(3000);
+            ESP.restart();
+        }
+        else {
+            Serial.println("Unknown command.");
+        }
+    }
+}
