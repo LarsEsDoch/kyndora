@@ -214,7 +214,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return ListTile(
               leading: const Icon(Icons.devices),
               title: Text(dev['name'] ?? dev['mac_address'] ?? 'Unknown Device'),
-              subtitle: const Text('Connected'),
+              subtitle: dev['status'] == 'online' ? const Text('Connected') : const Text('Offline'),
             );
           },
         ),
