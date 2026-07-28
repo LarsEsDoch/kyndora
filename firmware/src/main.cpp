@@ -31,6 +31,8 @@ MqttManager mqttManager;
 
 int lastMinute = -1;
 
+String currentDisplayMessage = "No messages :(";
+
 void setup() {
     Serial.begin(115200);
 
@@ -92,6 +94,32 @@ void loop() {
         if (now - lastTimeMinutes >= intervalMinute) {
             lastTimeMinutes = now;
             updater.automaticCheckForUpdates();
+        }
+
+        if (mqttManager.hasNewContent()) {
+            mqttManager.clearNewContentFlag();
+
+            String newMsg = mqttManager.fetchLatestMessage("192.168.178.100");
+
+            if (newMsg.length() > 0) {
+                currentDisplayMessage = newMsg;
+
+                constexpr uint16_t msg_x = 20;
+                constexpr uint16_t msg_y = 230;
+                constexpr uint16_t msg_w = 360;
+                constexpr uint16_t msg_h = 50;
+
+                display.setFont();
+                display.setPartialWindow(msg_x, msg_y, msg_w, msg_h);
+                display.firstPage();
+                do {
+                    display.fillRect(msg_x, msg_y, msg_w, msg_h, GxEPD_WHITE);
+                    display.setCursor(msg_x + 5, msg_y + 20);
+                    display.print("Partner: " + currentDisplayMessage);
+                } while (display.nextPage());
+                
+                display.setFont(&FreeSansBold24pt7b);
+            }
         }
 
         tm timeInfo{};

@@ -6,8 +6,11 @@ public:
     void begin(const String& deviceId, const String& mqttUser, const String& mqttPass, const char* brokerIp);
 
     void handle();
-
     void handleCallback(char* topic, byte* payload, unsigned int length);
+
+    bool hasNewContent() const { return _hasNewContent; }
+    void clearNewContentFlag() { _hasNewContent = false; }
+    String fetchLatestMessage(const char* backendIp);
 private:
     void connect();
     void publishHeartbeat();
@@ -17,6 +20,8 @@ private:
     String _mqttUser;
     String _mqttPass;
     const char* _brokerIp;
+
+    bool _hasNewContent = false;
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;

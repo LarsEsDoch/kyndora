@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
@@ -30,6 +31,7 @@ void MqttManager::connect() {
 
     String statusTopic = "kyndora/" + _deviceId + "/status";
     String commandTopic = "kyndora/" + _deviceId + "/commands";
+    String contentTopic = "kyndora/" + _deviceId + "/content";
 
     if (mqttClient.connect(_deviceId.c_str(),
                            _mqttUser.c_str(),
@@ -46,6 +48,7 @@ void MqttManager::connect() {
         mqttClient.publish(statusTopic.c_str(), "online", true);
 
         mqttClient.subscribe(commandTopic.c_str());
+        mqttClient.subscribe(contentTopic.c_str());
 
         publishHeartbeat();
         sendTelemetry();
@@ -137,6 +140,7 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
     Serial.println(message);
 
     String expectedCommandTopic = "kyndora/" + _deviceId + "/commands";
+    String expectedContentTopic = "kyndora/" + _deviceId + "/content";
 
     if (String(topic) == expectedCommandTopic) {
         if (message == "restart") {
@@ -148,4 +152,42 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
             Serial.println("Unknown command.");
         }
     }
+    else if (String(topic) == expectedContentTopic) {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, message);
+
+        if (!error && doc["action"] == "fetch_new") {
+            Serial.println("Ping from backend! Set flag to download new content.");
+
+            _hasNewContent = true;
+        }
+    }
+}
+
+String MqttManager::fetchLatestMessage(const char* backendIp) {
+    if (WiFi.status() != WL_CONNECTED) return "";
+
+    HTTPClient http;
+    String url = "http://" + String(backendIp) + ":8000/api/feed/device/" + _deviceId + "/latest";
+
+    http.begin(url);
+    int httpCode = http.GET();
+
+    String messageText = "";
+
+    if (httpCode == HTTP_CODE_OK) {
+        String payload = http.getString();
+        JsonDocument doc;
+        deserializeJson(doc, payload);
+
+        if (doc["has_new"] == true) {
+            messageText = doc["payload"].as<String>();
+            Serial.println("Neue Nachricht empfangen: " + messageText);
+        }
+    } else {
+        Serial.printf("HTTP GET fehlgeschlagen, Error: %s\n", http.errorToString(httpCode).c_str());
+    }
+
+    http.end();
+    return messageText;
 }
