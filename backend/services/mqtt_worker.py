@@ -27,7 +27,7 @@ def format_mac(mac: str) -> str:
 def on_message(client, userdata, msg):
     try:
         topic = msg.topic
-        payload = json.loads(msg.payload.decode())
+        payload_raw = msg.payload.decode()
 
         parts = topic.split("/")
         if len(parts) < 3:
@@ -39,29 +39,40 @@ def on_message(client, userdata, msg):
         db_mac = format_mac(device_mac)
 
         with Session(engine) as session:
-            if msg_type == "heartbeat":
+            if msg_type == "status":
                 device = session.get(Device, db_mac)
                 if device:
-                    device.status = payload.get("status", device.status)
-                    device.firmware_version = payload.get("fw_version", device.firmware_version)
-                    device.battery_level = payload.get("battery_level", device.battery_level)
+                    device.status = payload_raw
                     device.last_seen_at = datetime.now(timezone.utc)
                     session.add(device)
                     session.commit()
 
-            elif msg_type == "telemetry":
-                statement = select(Telemetry).where(Telemetry.device_mac == db_mac)
-                telemetry = session.exec(statement).first()
-                if telemetry:
-                    telemetry.rssi = payload.get("rssi", telemetry.rssi)
-                    telemetry.ssid = payload.get("ssid", telemetry.ssid)
-                    telemetry.uptime_s = payload.get("uptime_s", telemetry.uptime_s)
-                    telemetry.free_heap = payload.get("free_heap", telemetry.free_heap)
-                    telemetry.core_temp = payload.get("core_temp", telemetry.core_temp)
-                    telemetry.battery_v = payload.get("battery_v", telemetry.battery_v)
-                    telemetry.battery_percent = payload.get("battery_percent", telemetry.battery_percent)
-                    session.add(telemetry)
-                    session.commit()
+            else:
+                payload = json.loads(payload_raw)
+
+                if msg_type == "heartbeat":
+                    device = session.get(Device, db_mac)
+                    if device:
+                        device.status = payload.get("status", device.status)
+                        device.firmware_version = payload.get("fw_version", device.firmware_version)
+                        device.battery_level = payload.get("battery_level", device.battery_level)
+                        device.last_seen_at = datetime.now(timezone.utc)
+                        session.add(device)
+                        session.commit()
+
+                elif msg_type == "telemetry":
+                    statement = select(Telemetry).where(Telemetry.device_mac == db_mac)
+                    telemetry = session.exec(statement).first()
+                    if telemetry:
+                        telemetry.rssi = payload.get("rssi", telemetry.rssi)
+                        telemetry.ssid = payload.get("ssid", telemetry.ssid)
+                        telemetry.uptime_s = payload.get("uptime_s", telemetry.uptime_s)
+                        telemetry.free_heap = payload.get("free_heap", telemetry.free_heap)
+                        telemetry.core_temp = payload.get("core_temp", telemetry.core_temp)
+                        telemetry.battery_v = payload.get("battery_v", telemetry.battery_v)
+                        telemetry.battery_percent = payload.get("battery_percent", telemetry.battery_percent)
+                        session.add(telemetry)
+                        session.commit()
 
     except json.JSONDecodeError:
         pass
