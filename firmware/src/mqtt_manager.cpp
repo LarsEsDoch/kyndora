@@ -63,7 +63,7 @@ void MqttManager::publishHeartbeat() {
     doc["status"] = "online";
     doc["fw_version"] = FW_VERSION;
 
-    doc["battery_level"] = 85; 
+    doc["battery_level"] = 85;
 
     char buffer[256];
     serializeJson(doc, buffer);
