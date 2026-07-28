@@ -19,6 +19,7 @@ class Device(SQLModel, table=True):
     status: str = Field(default="offline")
     battery_level: Optional[int] = None
     last_seen_at: Optional[datetime] = None
+    timezone: Optional[str] = Field(default="CET-1CEST,M3.5.0,M10.5.0/3")
 
 class ProvisioningTicket(SQLModel, table=True):
     __tablename__ = "provisioning_tickets"
