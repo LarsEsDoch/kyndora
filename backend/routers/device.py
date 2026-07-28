@@ -1,4 +1,5 @@
 import os
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from paho.mqtt import publish
@@ -7,14 +8,15 @@ from pydantic import BaseModel
 from datetime import datetime, timezone
 from uuid import UUID
 
+import utils
 from database import get_session
-from models import Device, ProvisioningTicket, Telemetry
-from security import get_current_user_id, create_access_token
+from models import Device, ProvisioningTicket, Telemetry, User
+from security import get_current_user_id, create_access_token, get_current_user
 
 MQTT_BROKER = "192.168.178.33"
 MQTT_PORT = 1883
 
-router = APIRouter(prefix="/api/device", tags=["Device Provisioning"])
+router = APIRouter(prefix="/api/device", tags=["Devices"])
 
 
 class DeviceRegisterRequest(BaseModel):
@@ -121,3 +123,46 @@ def send_device_command(
         raise HTTPException(status_code=500, detail=f"Failed to send MQTT command: {str(e)}")
 
     return {"status": "success", "message": f"Command '{command}' sent to device {mac_address}"}
+
+@router.post("/display-timezone")
+def set_display_device_timezone(
+        iana_name: str,
+        session: Session = Depends(get_session),
+        current_user: User = Depends(get_current_user)
+):
+    if not current_user.partner_id:
+        raise HTTPException(status_code=400, detail="You don't have partner assigned.")
+
+    partner_device = session.exec(
+        select(Device).where(Device.user_id == current_user.partner_id)
+    ).first()
+
+    tz_string = utils.get_posix_tz(iana_name)
+
+    partner_device.timezone = tz_string
+    session.add(partner_device)
+    session.commit()
+
+    clean_mac = partner_device.mac_address.replace(":", "").upper()
+    topic = f"kyndora/{clean_mac}/commands"
+
+    payload = json.dumps({
+        "command": "set_timezone",
+        "tz": tz_string
+    })
+
+    try:
+        publish.single(
+            topic=topic,
+            payload=payload,
+            hostname=MQTT_BROKER,
+            port=MQTT_PORT,
+            auth={"username": "admin", "password": os.getenv('MQTT_PASSWORD')}
+        )
+    except Exception as e:
+        print(f"MQTT Error: {e}")
+
+    return {
+        "status": "success",
+        "message": f"Timezone changed to '{tz_string}' for your partner."
+    }
