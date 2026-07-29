@@ -188,21 +188,15 @@ String MqttManager::fetchLatestMessage(const char* backendIp) {
     http.begin(url);
     int httpCode = http.GET();
 
-    String messageText = "";
+    String jsonResponse = "";
 
     if (httpCode == HTTP_CODE_OK) {
-        String payload = http.getString();
-        JsonDocument doc;
-        deserializeJson(doc, payload);
-
-        if (doc["has_new"] == true) {
-            messageText = doc["payload"].as<String>();
-            Serial.println("Neue Nachricht empfangen: " + messageText);
-        }
+        jsonResponse = http.getString();
+        Serial.println("Feed-Data successful fetched.");
     } else {
-        Serial.printf("HTTP GET fehlgeschlagen, Error: %s\n", http.errorToString(httpCode).c_str());
+        Serial.printf("HTTP GET failed, Error: %s\n", http.errorToString(httpCode).c_str());
     }
 
     http.end();
-    return messageText;
+    return jsonResponse;
 }

@@ -8,6 +8,7 @@
 #include "update.hpp"
 #include "provisioning.hpp"
 #include "mqtt_manager.h"
+#include <ArduinoJson.h>
 
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
@@ -84,6 +85,37 @@ void setup() {
     }
 }
 
+void drawDoodle(String hexString) {
+    if (hexString.length() != 1600) {
+        Serial.printf("Error: Unexpected Doodle-Length. Expected 1600, got %d\n", hexString.length());
+        return;
+    }
+
+    uint8_t imageBuffer[800];
+
+    for (int i = 0; i < 800; i++) {
+        String hexByte = hexString.substring(i * 2, i * 2 + 2);
+
+        imageBuffer[i] = (uint8_t) strtol(hexByte.c_str(), NULL, 16);
+    }
+
+    Serial.println("Doodle successful parsed. Draw on E-Paper...");
+
+    int xPos = (display.width() - 80) / 2;
+    int yPos = (display.height() - 80) / 2;
+
+    display.setFullWindow();
+    display.firstPage();
+    do {
+        display.fillScreen(GxEPD_WHITE);
+
+        display.drawBitmap(xPos, yPos, imageBuffer, 80, 80, GxEPD_BLACK);
+
+    } while (display.nextPage());
+
+    Serial.println("Drawing finished.");
+}
+
 void loop() {
     uint32_t now = millis();
 
@@ -101,26 +133,39 @@ void loop() {
         if (mqttManager.hasNewContent()) {
             mqttManager.clearNewContentFlag();
 
-            String newMsg = mqttManager.fetchLatestMessage("192.168.178.100");
+            String responseJson = mqttManager.fetchLatestMessage("192.168.178.100");
 
-            if (newMsg.length() > 0) {
-                currentDisplayMessage = newMsg;
+            if (responseJson.length() > 0) {
+                JsonDocument doc;
+                DeserializationError error = deserializeJson(doc, responseJson);
 
-                constexpr uint16_t msg_x = 20;
-                constexpr uint16_t msg_y = 230;
-                constexpr uint16_t msg_w = 360;
-                constexpr uint16_t msg_h = 50;
+                if (!error && doc["has_new"] == true) {
+                    String contentType = doc["type"];
+                    String payload = doc["payload"].as<String>();
 
-                display.setFont();
-                display.setPartialWindow(msg_x, msg_y, msg_w, msg_h);
-                display.firstPage();
-                do {
-                    display.fillRect(msg_x, msg_y, msg_w, msg_h, GxEPD_WHITE);
-                    display.setCursor(msg_x + 5, msg_y + 20);
-                    display.print("Partner: " + currentDisplayMessage);
-                } while (display.nextPage());
+                    if (contentType == "doodle") {
+                        drawDoodle(payload);
+                    }
+                    else {
+                        currentDisplayMessage = payload;
 
-                display.setFont(&FreeSansBold24pt7b);
+                        constexpr uint16_t msg_x = 20;
+                        constexpr uint16_t msg_y = 230;
+                        constexpr uint16_t msg_w = 360;
+                        constexpr uint16_t msg_h = 50;
+
+                        display.setFont();
+                        display.setPartialWindow(msg_x, msg_y, msg_w, msg_h);
+                        display.firstPage();
+                        do {
+                            display.fillRect(msg_x, msg_y, msg_w, msg_h, GxEPD_WHITE);
+                            display.setCursor(msg_x + 5, msg_y + 20);
+                            display.print("Partner: " + currentDisplayMessage);
+                        } while (display.nextPage());
+
+                        display.setFont(&FreeSansBold24pt7b);
+                    }
+                }
             }
         }
 
