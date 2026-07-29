@@ -22,7 +22,6 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
-    // Hier initialisieren wir die drei Tabs und übergeben den Token
     _tabs = [
       FeedTab(token: widget.token),
       DevicesTab(token: widget.token),

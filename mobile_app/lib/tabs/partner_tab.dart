@@ -94,10 +94,6 @@ class _PartnerTabState extends State<PartnerTab> {
             icon: const Icon(Icons.send),
             label: const Text('Senden'),
           ),
-
-          // HINWEIS: Hier würdest du später noch eine ListView einbauen,
-          // die offene Anfragen (`GET /api/partners/requests`) auflistet,
-          // damit man sie mit einem Button-Klick annehmen kann (`POST /api/partners/accept/{id}`).
         ],
       ),
     );

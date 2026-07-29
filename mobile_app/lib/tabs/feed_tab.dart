@@ -25,9 +25,8 @@ class _FeedTabState extends State<FeedTab> {
 
   Future<void> _fetchFeed() async {
     try {
-      // Endpoint im Backend anpassen, falls er anders heißt!
       final response = await http.get(
-        Uri.parse('$backendUrl/api/feed/history'),
+        Uri.parse('$backendUrl/api/feed'),
         headers: {'Authorization': 'Bearer ${widget.token}'},
       );
       if (response.statusCode == 200) {
@@ -52,7 +51,6 @@ class _FeedTabState extends State<FeedTab> {
         itemCount: _feedItems.length,
         itemBuilder: (context, index) {
           final item = _feedItems[index];
-          // Simples Layout für den Feed
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: ListTile(

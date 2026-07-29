@@ -64,7 +64,7 @@ class _AuthScreenState extends State<AuthScreen> {
           Uri.parse('$backendUrl/auth/login'),
           headers: {'Content-Type': 'application/x-www-form-urlencoded'},
           body: {
-            'username': _emailController.text, // Muss "username" heißen, auch wenn es eine Mail ist!
+            'username': _emailController.text,
             'password': _passController.text,
           },
         );

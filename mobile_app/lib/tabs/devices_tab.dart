@@ -1,10 +1,9 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
 import '../constants.dart';
 import '../screens/provisioning_screen.dart';
+import '../screens/device_detail_screen.dart';
 
 class DevicesTab extends StatefulWidget {
   final String token;
@@ -40,18 +39,6 @@ class _DevicesTabState extends State<DevicesTab> {
     }
   }
 
-  Future<void> _restartDevice(String macAddress) async {
-    try {
-      await http.post(
-        Uri.parse('$backendUrl/api/device/$macAddress/command?command=restart'),
-        headers: {'Authorization': 'Bearer ${widget.token}'},
-      );
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restart Befehl gesendet')));
-    } catch (e) {
-      print("Restart Error: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -65,28 +52,26 @@ class _DevicesTabState extends State<DevicesTab> {
           itemCount: _devices.length,
           itemBuilder: (context, index) {
             final dev = _devices[index];
-            return ExpansionTile(
-              leading: const Icon(Icons.developer_board),
-              title: Text(dev['name'] ?? dev['mac_address']),
-              subtitle: Text(dev['status'] == 'online' ? 'Online' : 'Offline'),
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      // Hier würdest du echte Telemetrie aus dem Dev-Objekt holen
-                      Column(children: const [Icon(Icons.wifi), Text("-65 dBm")]),
-                      Column(children: const [Icon(Icons.memory), Text("45°C")]),
-                      IconButton(
-                        icon: const Icon(Icons.restart_alt, color: Colors.red),
-                        onPressed: () => _restartDevice(dev['mac_address']),
-                        tooltip: 'ESP32 Neustarten',
-                      )
-                    ],
-                  ),
-                )
-              ],
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const Icon(Icons.developer_board),
+                title: Text(dev['name'] ?? dev['mac_address']),
+                subtitle: Text(dev['status'] == 'online' ? 'Online' : 'Offline'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DeviceDetailScreen(
+                        token: widget.token,
+                        macAddress: dev['mac_address'],
+                        deviceName: dev['name'] ?? dev['mac_address'],
+                      ),
+                    ),
+                  ).then((_) => _fetchDevices());
+                },
+              ),
             );
           },
         ),
