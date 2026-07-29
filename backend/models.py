@@ -14,6 +14,7 @@ class User(SQLModel, table=True):
 class Device(SQLModel, table=True):
     __tablename__ = "devices"
     mac_address: str = Field(primary_key=True)
+    name: str = Field(default=mac_address)
     user_id: UUID = Field(foreign_key="users.id")
     firmware_version: Optional[str] = None
     status: str = Field(default="offline")

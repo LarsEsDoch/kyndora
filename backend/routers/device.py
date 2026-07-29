@@ -33,6 +33,43 @@ def list_user_devices(
 
     return devices
 
+
+@router.get("/{mac_address}")
+def get_device_details(
+        mac_address: str,
+        session: Session = Depends(get_session),
+        current_user_id: str = Depends(get_current_user_id)
+):
+    device = session.get(Device, mac_address)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+
+    if str(device.user_id) != str(current_user_id):
+        raise HTTPException(status_code=403, detail="Not authorized for this device")
+
+    statement = select(Telemetry).where(Telemetry.device_mac == mac_address).order_by(Telemetry.created_at.desc())
+    latest_telemetry = session.exec(statement).first()
+
+    last_seen_str = "Never"
+    if device.last_seen_at:
+        last_seen_str = device.last_seen_at.strftime("%d.%m.%Y %H:%M:%S")
+
+    telemetry_data = {}
+    if latest_telemetry:
+        telemetry_data = latest_telemetry.model_dump()
+        telemetry_data["temperature"] = latest_telemetry.core_temp
+
+    return {
+        "mac_address": device.mac_address,
+        "name": device.name,
+        "status": device.status,
+        "last_seen": last_seen_str,
+        "firmware_version": device.firmware_version,
+        "battery_level": device.battery_level,
+        "timezone": device.timezone,
+        "telemetry": telemetry_data
+    }
+
 @router.post("/ticket", status_code=201)
 def generate_provisioning_ticket(
         session: Session = Depends(get_session),
@@ -106,7 +143,7 @@ def send_device_command(
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    if str(device.user_id) != current_user_id:
+    if device.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="Not authorized for this device")
 
     topic = f"kyndora/{mac_address.replace(':', '')}/commands"

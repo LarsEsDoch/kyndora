@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, select, or_
 import paho.mqtt.publish as publish
 import json
 import os
@@ -17,6 +17,40 @@ def format_mac(mac: str) -> str:
     if len(mac) == 12 and ":" not in mac:
         return ":".join(mac[i:i + 2] for i in range(0, 12, 2)).upper()
     return mac.upper()
+
+
+@router.get("")
+def get_current_feed(
+        session: Session = Depends(get_session),
+        current_user= Depends(get_current_user)
+):
+    statement = (
+        select(ContentFeed)
+        .where(
+            or_(
+                ContentFeed.receiver_id == current_user.id,
+                ContentFeed.sender_id == current_user.id
+            )
+        )
+        .order_by(ContentFeed.created_at.desc())
+        .limit(5)
+    )
+
+    feed_items = session.exec(statement).all()
+
+    result = []
+    for item in feed_items:
+        result.append({
+            "id": item.id,
+            "content_type": item.content_type,
+            "payload": item.payload,
+            "is_displayed": item.is_displayed,
+            "created_at": item.created_at.isoformat(),
+            "direction": "sent" if item.sender_id == current_user.id else "received"
+        })
+
+    return result
+
 
 @router.post("/")
 def send_content(
