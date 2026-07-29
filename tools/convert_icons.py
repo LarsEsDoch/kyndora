@@ -1,20 +1,27 @@
 import os
 from PIL import Image
 
-SOURCE_DIR = "firmware/data/icons/weather"
-OUTPUT_FILE = "firmware/include/weather_icons.h"
+SOURCE_DIR = "firmware/data/icons"
+OUTPUT_FILE = "firmware/include/icons.h"
 
 ICONS = [
-    "air",
-    "clear_day",
-    "cloud",
-    "mist",
-    "moon_stars",
-    "partly_cloudy_day",
-    "partly_cloudy_night",
-    "rainy",
-    "thunderstorm",
-    "weather_snowy"
+    "weather/air",
+    "weather/clear_day",
+    "weather/cloud",
+    "weather/mist",
+    "weather/moon_stars",
+    "weather/partly_cloudy_day",
+    "weather/partly_cloudy_night",
+    "weather/rainy",
+    "weather/thunderstorm",
+    "weather/weather_snowy",
+    "wifi/wifi_alert",
+    "wifi/wifi_not_connected",
+    "wifi/wifi_not_set_up",
+    "wifi/wifi_strength_1",
+    "wifi/wifi_strength_2",
+    "wifi/wifi_strength_3",
+    "wifi/wifi_strength_4"
 ]
 
 ICON_SIZE = 24
