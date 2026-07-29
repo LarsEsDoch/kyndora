@@ -16,6 +16,8 @@ public:
     void clearNewWeatherFlag() { _hasNewWeather = false; }
     float getWeatherTemp() const { return _weatherTemp; }
     int getWeatherCode() const { return _weatherCode; }
+    bool getWeatherIsDay() const { return _weatherIsDay; }
+    bool getWeatherWindy() const { return _weatherWindy; }
 private:
     void connect();
     void publishHeartbeat();
@@ -31,6 +33,8 @@ private:
     bool _hasNewWeather = false;
     float _weatherTemp = 0;
     int _weatherCode = 0;
+    bool _weatherIsDay = true;
+    bool _weatherWindy = false;
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;

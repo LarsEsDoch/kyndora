@@ -8,6 +8,7 @@
 #include "update.hpp"
 #include "provisioning.hpp"
 #include "mqtt_manager.h"
+#include "weather_icons.h"
 #include <ArduinoJson.h>
 
 #define PIN_EPD_CS    10
@@ -34,35 +35,67 @@ int lastMinute = -1;
 
 String currentDisplayMessage = "No messages :(";
 
-String weatherCodeToText(int code) {
-    if (code == 0) return "Klar";
-    if (code == 1 || code == 2 || code == 3) return "Bewoelkt";
-    if (code == 45 || code == 48) return "Nebel";
-    if (code >= 51 && code <= 67) return "Regen";
-    if (code >= 71 && code <= 77) return "Schnee";
-    if (code >= 80 && code <= 82) return "Schauer";
-    if (code >= 95) return "Gewitter";
-    return "Unbekannt";
+void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, uint8_t scale) {
+    const int16_t rowBytes = (WEATHER_ICON_SIZE + 7) / 8;
+
+    for (int16_t row = 0; row < WEATHER_ICON_SIZE; row++) {
+        for (int16_t col = 0; col < WEATHER_ICON_SIZE; col++) {
+            uint8_t byteVal = pgm_read_byte(&bitmap[row * rowBytes + (col / 8)]);
+            bool isSet = byteVal & (1 << (7 - (col % 8)));
+
+            if (isSet) {
+                display.fillRect(x + col * scale, y + row * scale, scale, scale, GxEPD_BLACK);
+            }
+        }
+    }
 }
 
-void drawWeather(float temp, int code) {
+const uint8_t* selectWeatherIcon(int code, bool isDay, bool windy) {
+    if (code >= 95) {
+        return ICON_THUNDERSTORM;
+    }
+    if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
+        return ICON_WEATHER_SNOWY;
+    }
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+        return ICON_RAINY;
+    }
+    if (code == 45 || code == 48) {
+        return ICON_MIST;
+    }
+    if (windy && code <= 3) {
+        return ICON_AIR;
+    }
+    if (code == 0) {
+        return isDay ? ICON_CLEAR_DAY : ICON_MOON_STARS;
+    }
+    if (code == 1 || code == 2) {
+        return isDay ? ICON_PARTLY_CLOUDY_DAY : ICON_PARTLY_CLOUDY_NIGHT;
+    }
+    return ICON_CLOUD;
+}
+
+void drawWeather(float temp, int code, bool isDay, bool windy) {
     constexpr uint16_t weather_x = 20;
-    constexpr uint16_t weather_y = 290;
+    constexpr uint16_t weather_y = 225;
     constexpr uint16_t weather_w = 360;
-    constexpr uint16_t weather_h = 50;
+    constexpr uint16_t weather_h = 70;
+    constexpr uint8_t iconScale = 2;
 
-    String weatherText = weatherCodeToText(code) + " " + String(temp, 1) + "C";
-
-    display.setFont();
     display.setPartialWindow(weather_x, weather_y, weather_w, weather_h);
     display.firstPage();
     do {
         display.fillRect(weather_x, weather_y, weather_w, weather_h, GxEPD_WHITE);
-        display.setCursor(weather_x + 5, weather_y + 20);
-        display.print(weatherText);
-    } while (display.nextPage());
 
-    display.setFont(&FreeSansBold24pt7b);
+        const uint8_t* icon = selectWeatherIcon(code, isDay, windy);
+        drawIconBitmap(icon, weather_x + 5, weather_y + 11, iconScale);
+
+        display.setFont();
+        display.setTextSize(2);
+        display.setCursor(weather_x + 90, weather_y + 30);
+        display.print(String(temp, 1) + " C");
+        display.setTextSize(1);
+    } while (display.nextPage());
 }
 
 void setup() {
@@ -163,7 +196,12 @@ void loop() {
 
         if (mqttManager.hasNewWeather()) {
             mqttManager.clearNewWeatherFlag();
-            drawWeather(mqttManager.getWeatherTemp(), mqttManager.getWeatherCode());
+            drawWeather(
+                mqttManager.getWeatherTemp(),
+                mqttManager.getWeatherCode(),
+                mqttManager.getWeatherIsDay(),
+                mqttManager.getWeatherWindy()
+            );
         }
 
         if (mqttManager.hasNewContent()) {
@@ -186,7 +224,7 @@ void loop() {
                         currentDisplayMessage = payload;
 
                         constexpr uint16_t msg_x = 20;
-                        constexpr uint16_t msg_y = 230;
+                        constexpr uint16_t msg_y = 305;
                         constexpr uint16_t msg_w = 360;
                         constexpr uint16_t msg_h = 50;
 

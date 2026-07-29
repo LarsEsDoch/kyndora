@@ -161,6 +161,8 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
         else if (!error && doc["command"] == "set_weather") {
             _weatherTemp = doc["temp"].as<float>();
             _weatherCode = doc["code"].as<int>();
+            _weatherIsDay = doc["is_day"].as<bool>();
+            _weatherWindy = doc["windy"].as<bool>();
             _hasNewWeather = true;
             Serial.println("Weather data received.");
         }
