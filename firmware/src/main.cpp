@@ -34,6 +34,37 @@ int lastMinute = -1;
 
 String currentDisplayMessage = "No messages :(";
 
+String weatherCodeToText(int code) {
+    if (code == 0) return "Klar";
+    if (code == 1 || code == 2 || code == 3) return "Bewoelkt";
+    if (code == 45 || code == 48) return "Nebel";
+    if (code >= 51 && code <= 67) return "Regen";
+    if (code >= 71 && code <= 77) return "Schnee";
+    if (code >= 80 && code <= 82) return "Schauer";
+    if (code >= 95) return "Gewitter";
+    return "Unbekannt";
+}
+
+void drawWeather(float temp, int code) {
+    constexpr uint16_t weather_x = 20;
+    constexpr uint16_t weather_y = 290;
+    constexpr uint16_t weather_w = 360;
+    constexpr uint16_t weather_h = 50;
+
+    String weatherText = weatherCodeToText(code) + " " + String(temp, 1) + "C";
+
+    display.setFont();
+    display.setPartialWindow(weather_x, weather_y, weather_w, weather_h);
+    display.firstPage();
+    do {
+        display.fillRect(weather_x, weather_y, weather_w, weather_h, GxEPD_WHITE);
+        display.setCursor(weather_x + 5, weather_y + 20);
+        display.print(weatherText);
+    } while (display.nextPage());
+
+    display.setFont(&FreeSansBold24pt7b);
+}
+
 void setup() {
     Serial.begin(115200);
 
@@ -128,6 +159,11 @@ void loop() {
         if (now - lastTimeMinutes >= intervalMinute) {
             lastTimeMinutes = now;
             updater.automaticCheckForUpdates();
+        }
+
+        if (mqttManager.hasNewWeather()) {
+            mqttManager.clearNewWeatherFlag();
+            drawWeather(mqttManager.getWeatherTemp(), mqttManager.getWeatherCode());
         }
 
         if (mqttManager.hasNewContent()) {

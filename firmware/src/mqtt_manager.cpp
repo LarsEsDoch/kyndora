@@ -158,6 +158,12 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
             configTzTime(newTz.c_str(), "pool.ntp.org");
             Serial.println("Timezone succesful updated!");
         }
+        else if (!error && doc["command"] == "set_weather") {
+            _weatherTemp = doc["temp"].as<float>();
+            _weatherCode = doc["code"].as<int>();
+            _hasNewWeather = true;
+            Serial.println("Weather data received.");
+        }
         else if (message == "restart") {
             Serial.println("Received command: Restart in 3 seconds...");
             delay(3000);

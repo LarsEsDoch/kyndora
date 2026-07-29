@@ -11,6 +11,11 @@ public:
     bool hasNewContent() const { return _hasNewContent; }
     void clearNewContentFlag() { _hasNewContent = false; }
     String fetchLatestMessage(const char* backendIp);
+
+    bool hasNewWeather() const { return _hasNewWeather; }
+    void clearNewWeatherFlag() { _hasNewWeather = false; }
+    float getWeatherTemp() const { return _weatherTemp; }
+    int getWeatherCode() const { return _weatherCode; }
 private:
     void connect();
     void publishHeartbeat();
@@ -22,6 +27,10 @@ private:
     const char* _brokerIp;
 
     bool _hasNewContent = false;
+
+    bool _hasNewWeather = false;
+    float _weatherTemp = 0;
+    int _weatherCode = 0;
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;
