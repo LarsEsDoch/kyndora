@@ -12,6 +12,7 @@ MQTT_BROKER = "192.168.178.33"
 MQTT_PORT = 1883
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', 'admin123')
 WEATHER_INTERVAL_SECONDS = 900
+WINDY_THRESHOLD_KMH = 25
 
 
 def fetch_weather(latitude: float, longitude: float):
@@ -19,22 +20,29 @@ def fetch_weather(latitude: float, longitude: float):
     params = {
         "latitude": latitude,
         "longitude": longitude,
-        "current": "temperature_2m,weather_code"
+        "current": "temperature_2m,weather_code,is_day,wind_speed_10m"
     }
     response = requests.get(url, params=params, timeout=10)
     response.raise_for_status()
     current = response.json()["current"]
-    return current["temperature_2m"], current["weather_code"]
+    return (
+        current["temperature_2m"],
+        current["weather_code"],
+        bool(current["is_day"]),
+        current["wind_speed_10m"]
+    )
 
 
-def push_weather_to_device(device: Device, temperature: float, weather_code: int):
+def push_weather_to_device(device: Device, temperature: float, weather_code: int, is_day: bool, wind_speed: float):
     clean_mac = device.mac_address.replace(":", "").upper()
     topic = f"kyndora/{clean_mac}/commands"
 
     payload = json.dumps({
         "command": "set_weather",
         "temp": temperature,
-        "code": weather_code
+        "code": weather_code,
+        "is_day": is_day,
+        "windy": wind_speed >= WINDY_THRESHOLD_KMH
     })
 
     publish.single(
@@ -60,9 +68,9 @@ def run_weather_cycle():
                 continue
 
             try:
-                temperature, weather_code = fetch_weather(partner.latitude, partner.longitude)
-                push_weather_to_device(device, temperature, weather_code)
-                print(f"Weather pushed to {device.mac_address}: {temperature}C, code {weather_code}")
+                temperature, weather_code, is_day, wind_speed = fetch_weather(partner.latitude, partner.longitude)
+                push_weather_to_device(device, temperature, weather_code, is_day, wind_speed)
+                print(f"Weather pushed to {device.mac_address}: {temperature}C, code {weather_code}, day={is_day}, wind={wind_speed}")
             except Exception as e:
                 print(f"Weather update failed for {device.mac_address}: {e}")
 
