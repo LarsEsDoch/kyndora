@@ -8,3 +8,4 @@ PyJWT
 python-multipart
 pydantic
 paho-mqtt
+requests

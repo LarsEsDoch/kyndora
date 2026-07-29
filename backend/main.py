@@ -3,8 +3,9 @@ from contextlib import asynccontextmanager
 from mqtt_client import connect_mqtt
 from database import create_db_and_tables
 
-from routers import auth, doodles, device, mqtt, partners, feed
+from routers import auth, doodles, device, mqtt, partners, feed, users
 from services.mqtt_worker import init_mqtt_worker
+from services.weather_worker import init_weather_worker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,6 +15,8 @@ async def lifespan(app: FastAPI):
     connect_mqtt()
     print("Starting MQTT Worker.")
     init_mqtt_worker()
+    print("Starting Weather Worker.")
+    init_weather_worker()
     yield
 
 app = FastAPI(title="Kyndora API", lifespan=lifespan)
@@ -24,6 +27,7 @@ app.include_router(device.router)
 app.include_router(mqtt.router)
 app.include_router(partners.router)
 app.include_router(feed.router)
+app.include_router(users.router)
 
 @app.get("/")
 def read_root():

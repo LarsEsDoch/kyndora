@@ -10,6 +10,9 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True)
     password_hash: str
     partner_id: Optional[UUID] = Field(default=None, foreign_key="users.id")
+    latitude: Optional[float] = Field(default=None)
+    longitude: Optional[float] = Field(default=None)
+    location_updated_at: Optional[datetime] = Field(default=None)
 
 class Device(SQLModel, table=True):
     __tablename__ = "devices"
