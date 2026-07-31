@@ -9,6 +9,8 @@ public:
     void checkForUpdates();
 
     void executeOTA();
+
+    bool hasUpdateError() const { return updateError; }
 private:
     int updateHour;
 
@@ -17,6 +19,8 @@ private:
     String currentVersion;
 
     String downloadUrl;
+
+    bool updateError = false;
 
     static bool isWiFiConnected();
 };

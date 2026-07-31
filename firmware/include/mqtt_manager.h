@@ -18,6 +18,8 @@ public:
     int getWeatherCode() const { return _weatherCode; }
     bool getWeatherIsDay() const { return _weatherIsDay; }
     bool getWeatherWindy() const { return _weatherWindy; }
+
+    bool hasApiError() const { return _apiError; }
 private:
     void connect();
     void publishHeartbeat();
@@ -35,6 +37,8 @@ private:
     int _weatherCode = 0;
     bool _weatherIsDay = true;
     bool _weatherWindy = false;
+
+    bool _apiError = false;
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;

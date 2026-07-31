@@ -201,8 +201,10 @@ String MqttManager::fetchLatestMessage(const char* backendIp) {
     if (httpCode == HTTP_CODE_OK) {
         jsonResponse = http.getString();
         Serial.println("Feed-Data successful fetched.");
+        _apiError = false;
     } else {
         Serial.printf("HTTP GET failed, Error: %s\n", http.errorToString(httpCode).c_str());
+        _apiError = true;
     }
 
     http.end();

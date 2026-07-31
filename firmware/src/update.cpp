@@ -33,6 +33,7 @@ void UpdateManager::automaticCheckForUpdates() {
 void UpdateManager::checkForUpdates() {
     if (!isWiFiConnected()) {
         Serial.println("Update error: No Wi-Fi connection.");
+        updateError = true;
         return;
     }
 
@@ -52,6 +53,7 @@ void UpdateManager::checkForUpdates() {
         const int httpCode = http.GET();
 
         if (httpCode == HTTP_CODE_OK) {
+            updateError = false;
             const String payload = http.getString();
 
             const int tagIndex = payload.indexOf(R"("tag_name":")");
@@ -83,8 +85,11 @@ void UpdateManager::checkForUpdates() {
             }
         } else {
             Serial.printf("Error retrieving API, HTTP code: %d\n", httpCode);
+            updateError = true;
         }
         http.end();
+    } else {
+        updateError = true;
     }
 }
 
@@ -109,8 +114,6 @@ void UpdateManager::executeOTA() {
 
             if (Update.begin(contentLength)) {
                 Serial.println("Flashing started. Please do not turn off the box...");
-
-                // TODO: Hier kannst du später deine Display-Wartemeldung einblenden!
 
                 WiFiClient& stream = http.getStream();
 
