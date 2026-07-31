@@ -8,7 +8,7 @@
 #include "update.hpp"
 #include "provisioning.hpp"
 #include "mqtt_manager.h"
-#include "weather_icons.h"
+#include "icons.h"
 #include <ArduinoJson.h>
 
 #define PIN_EPD_CS    10
@@ -35,16 +35,37 @@ int lastMinute = -1;
 
 String currentDisplayMessage = "No messages :(";
 
-void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, uint8_t scale) {
+constexpr int16_t WEATHER_ICON_TARGET_SIZE = 48;
+constexpr int16_t WIFI_ICON_TARGET_SIZE = 24;
+
+enum WifiIconState {
+    WIFI_ICON_NOT_SETUP,
+    WIFI_ICON_NOT_CONNECTED,
+    WIFI_ICON_ALERT,
+    WIFI_ICON_STRENGTH_1,
+    WIFI_ICON_STRENGTH_2,
+    WIFI_ICON_STRENGTH_3,
+    WIFI_ICON_STRENGTH_4
+};
+
+WifiIconState lastWifiIconState = WIFI_ICON_NOT_SETUP;
+bool wifiIconInitialized = false;
+uint32_t lastWifiCheck = 0;
+constexpr uint32_t wifiCheckInterval = 5000;
+
+void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, int16_t targetSize) {
     const int16_t rowBytes = (WEATHER_ICON_SIZE + 7) / 8;
 
-    for (int16_t row = 0; row < WEATHER_ICON_SIZE; row++) {
-        for (int16_t col = 0; col < WEATHER_ICON_SIZE; col++) {
-            uint8_t byteVal = pgm_read_byte(&bitmap[row * rowBytes + (col / 8)]);
-            bool isSet = byteVal & (1 << (7 - (col % 8)));
+    for (int16_t ty = 0; ty < targetSize; ty++) {
+        int16_t srcY = (ty * WEATHER_ICON_SIZE) / targetSize;
+        for (int16_t tx = 0; tx < targetSize; tx++) {
+            int16_t srcX = (tx * WEATHER_ICON_SIZE) / targetSize;
+
+            uint8_t byteVal = pgm_read_byte(&bitmap[srcY * rowBytes + (srcX / 8)]);
+            bool isSet = byteVal & (1 << (7 - (srcX % 8)));
 
             if (isSet) {
-                display.fillRect(x + col * scale, y + row * scale, scale, scale, GxEPD_BLACK);
+                display.drawPixel(x + tx, y + ty, GxEPD_BLACK);
             }
         }
     }
@@ -78,9 +99,8 @@ const uint8_t* selectWeatherIcon(int code, bool isDay, bool windy) {
 void drawWeather(float temp, int code, bool isDay, bool windy) {
     constexpr uint16_t weather_x = 20;
     constexpr uint16_t weather_y = 225;
-    constexpr uint16_t weather_w = 360;
+    const uint16_t weather_w = display.width() - 2 * weather_x;
     constexpr uint16_t weather_h = 70;
-    constexpr uint8_t iconScale = 2;
 
     display.setPartialWindow(weather_x, weather_y, weather_w, weather_h);
     display.firstPage();
@@ -88,13 +108,53 @@ void drawWeather(float temp, int code, bool isDay, bool windy) {
         display.fillRect(weather_x, weather_y, weather_w, weather_h, GxEPD_WHITE);
 
         const uint8_t* icon = selectWeatherIcon(code, isDay, windy);
-        drawIconBitmap(icon, weather_x + 5, weather_y + 11, iconScale);
+        drawIconBitmap(icon, weather_x + 5, weather_y + (weather_h - WEATHER_ICON_TARGET_SIZE) / 2, WEATHER_ICON_TARGET_SIZE);
 
         display.setFont();
         display.setTextSize(2);
-        display.setCursor(weather_x + 90, weather_y + 30);
+        display.setCursor(weather_x + WEATHER_ICON_TARGET_SIZE + 25, weather_y + weather_h / 2 + 6);
         display.print(String(temp, 1) + " C");
         display.setTextSize(1);
+    } while (display.nextPage());
+}
+
+bool getApiErrorFlag() {
+    return mqttManager.hasApiError() || updater.hasUpdateError();
+}
+
+WifiIconState getCurrentWifiIconState() {
+    if (!ProvisioningManager::isProvisioned()) return WIFI_ICON_NOT_SETUP;
+    if (WiFi.status() != WL_CONNECTED) return WIFI_ICON_NOT_CONNECTED;
+    if (getApiErrorFlag()) return WIFI_ICON_ALERT;
+
+    int32_t rssi = WiFi.RSSI();
+    if (rssi >= -60) return WIFI_ICON_STRENGTH_4;
+    if (rssi >= -70) return WIFI_ICON_STRENGTH_3;
+    if (rssi >= -80) return WIFI_ICON_STRENGTH_2;
+    return WIFI_ICON_STRENGTH_1;
+}
+
+const uint8_t* wifiIconBitmap(WifiIconState state) {
+    switch (state) {
+        case WIFI_ICON_NOT_SETUP: return ICON_WIFI_NOT_SET_UP;
+        case WIFI_ICON_NOT_CONNECTED: return ICON_WIFI_NOT_CONNECTED;
+        case WIFI_ICON_ALERT: return ICON_WIFI_ALERT;
+        case WIFI_ICON_STRENGTH_1: return ICON_WIFI_STRENGTH_1;
+        case WIFI_ICON_STRENGTH_2: return ICON_WIFI_STRENGTH_2;
+        case WIFI_ICON_STRENGTH_3: return ICON_WIFI_STRENGTH_3;
+        default: return ICON_WIFI_STRENGTH_4;
+    }
+}
+
+void drawWifiIcon(WifiIconState state) {
+    const uint16_t wifi_x = display.width() - WIFI_ICON_TARGET_SIZE - 10;
+    constexpr uint16_t wifi_y = 10;
+
+    display.setPartialWindow(wifi_x, wifi_y, WIFI_ICON_TARGET_SIZE, WIFI_ICON_TARGET_SIZE);
+    display.firstPage();
+    do {
+        display.fillRect(wifi_x, wifi_y, WIFI_ICON_TARGET_SIZE, WIFI_ICON_TARGET_SIZE, GxEPD_WHITE);
+        drawIconBitmap(wifiIconBitmap(state), wifi_x, wifi_y, WIFI_ICON_TARGET_SIZE);
     } while (display.nextPage());
 }
 
@@ -184,6 +244,16 @@ void loop() {
     uint32_t now = millis();
 
     ProvisioningManager::handle();
+
+    if (now - lastWifiCheck >= wifiCheckInterval || !wifiIconInitialized) {
+        lastWifiCheck = now;
+        WifiIconState currentState = getCurrentWifiIconState();
+        if (currentState != lastWifiIconState || !wifiIconInitialized) {
+            lastWifiIconState = currentState;
+            wifiIconInitialized = true;
+            drawWifiIcon(currentState);
+        }
+    }
 
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
 

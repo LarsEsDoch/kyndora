@@ -3,7 +3,7 @@
 
 #define WEATHER_ICON_SIZE 24
 
-const uint8_t ICON_WEATHER/AIR[] PROGMEM = {
+const uint8_t ICON_AIR[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -30,7 +30,7 @@ const uint8_t ICON_WEATHER/AIR[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/CLEAR_DAY[] PROGMEM = {
+const uint8_t ICON_CLEAR_DAY[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x18, 0x00,
     0x00, 0x18, 0x00,
@@ -57,7 +57,7 @@ const uint8_t ICON_WEATHER/CLEAR_DAY[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/CLOUD[] PROGMEM = {
+const uint8_t ICON_CLOUD[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -84,7 +84,7 @@ const uint8_t ICON_WEATHER/CLOUD[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/MIST[] PROGMEM = {
+const uint8_t ICON_MIST[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -111,7 +111,7 @@ const uint8_t ICON_WEATHER/MIST[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/MOON_STARS[] PROGMEM = {
+const uint8_t ICON_MOON_STARS[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0xC2, 0x00,
@@ -138,7 +138,7 @@ const uint8_t ICON_WEATHER/MOON_STARS[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/PARTLY_CLOUDY_DAY[] PROGMEM = {
+const uint8_t ICON_PARTLY_CLOUDY_DAY[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x18, 0x00,
     0x00, 0x18, 0x00,
@@ -165,7 +165,7 @@ const uint8_t ICON_WEATHER/PARTLY_CLOUDY_DAY[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/PARTLY_CLOUDY_NIGHT[] PROGMEM = {
+const uint8_t ICON_PARTLY_CLOUDY_NIGHT[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x60, 0x00,
@@ -192,7 +192,7 @@ const uint8_t ICON_WEATHER/PARTLY_CLOUDY_NIGHT[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/RAINY[] PROGMEM = {
+const uint8_t ICON_RAINY[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x3C, 0x00,
@@ -219,7 +219,7 @@ const uint8_t ICON_WEATHER/RAINY[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/THUNDERSTORM[] PROGMEM = {
+const uint8_t ICON_THUNDERSTORM[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x3C, 0x00,
@@ -246,7 +246,7 @@ const uint8_t ICON_WEATHER/THUNDERSTORM[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WEATHER/WEATHER_SNOWY[] PROGMEM = {
+const uint8_t ICON_WEATHER_SNOWY[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x3C, 0x00,
     0x00, 0xFF, 0x00,
@@ -273,7 +273,7 @@ const uint8_t ICON_WEATHER/WEATHER_SNOWY[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_ALERT[] PROGMEM = {
+const uint8_t ICON_WIFI_ALERT[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -300,7 +300,7 @@ const uint8_t ICON_WIFI/WIFI_ALERT[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_NOT_CONNECTED[] PROGMEM = {
+const uint8_t ICON_WIFI_NOT_CONNECTED[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -327,7 +327,7 @@ const uint8_t ICON_WIFI/WIFI_NOT_CONNECTED[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_NOT_SET_UP[] PROGMEM = {
+const uint8_t ICON_WIFI_NOT_SET_UP[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -354,7 +354,7 @@ const uint8_t ICON_WIFI/WIFI_NOT_SET_UP[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_STRENGTH_1[] PROGMEM = {
+const uint8_t ICON_WIFI_STRENGTH_1[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -381,7 +381,7 @@ const uint8_t ICON_WIFI/WIFI_STRENGTH_1[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_STRENGTH_2[] PROGMEM = {
+const uint8_t ICON_WIFI_STRENGTH_2[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -408,7 +408,7 @@ const uint8_t ICON_WIFI/WIFI_STRENGTH_2[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_STRENGTH_3[] PROGMEM = {
+const uint8_t ICON_WIFI_STRENGTH_3[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
@@ -435,7 +435,7 @@ const uint8_t ICON_WIFI/WIFI_STRENGTH_3[] PROGMEM = {
     0x00, 0x00, 0x00,
 };
 
-const uint8_t ICON_WIFI/WIFI_STRENGTH_4[] PROGMEM = {
+const uint8_t ICON_WIFI_STRENGTH_4[] PROGMEM = {
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
     0x00, 0x00, 0x00,
