@@ -18,6 +18,11 @@
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
+#define PIN_SEND_REACTION 6
+
+unsigned long lastReactionButtonMillis = 0;
+const unsigned long debounceDelay = 200;
+
 auto ntpServer = "pool.ntp.org";
 String timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
@@ -161,6 +166,8 @@ void drawWifiIcon(WifiIconState state) {
 void setup() {
     Serial.begin(115200);
 
+    pinMode(PIN_SEND_REACTION, INPUT_PULLUP);
+
     SPI.begin(PIN_EPD_SCK, -1, PIN_EPD_MOSI, PIN_EPD_CS);
     display.init(115200, true, 2, false);
     display.setRotation(1);
@@ -244,6 +251,13 @@ void loop() {
     uint32_t now = millis();
 
     ProvisioningManager::handle();
+
+    if (digitalRead(PIN_SEND_REACTION) == LOW) {
+        if (millis() - lastReactionButtonMillis > debounceDelay) {
+            lastReactionButtonMillis = millis();
+            Serial.print("DID NOT SEN DREACTION");
+        }
+    }
 
     if (now - lastWifiCheck >= wifiCheckInterval || !wifiIconInitialized) {
         lastWifiCheck = now;
