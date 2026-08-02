@@ -21,7 +21,9 @@ ICONS = [
     "wifi/wifi_strength_1",
     "wifi/wifi_strength_2",
     "wifi/wifi_strength_3",
-    "wifi/wifi_strength_4"
+    "wifi/wifi_strength_4",
+    "location/location_off",
+    "location/location_on"
 ]
 
 ICON_SIZE = 24
