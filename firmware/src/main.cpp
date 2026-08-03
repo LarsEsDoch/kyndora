@@ -203,7 +203,7 @@ void setup() {
         String deviceId = WiFi.macAddress();
         deviceId.replace(":", "");
 
-        const char* brokerIp = "192.168.178.33";
+        const char* brokerIp = "192.168.178.32";
 
         mqttManager.begin(deviceId, mqttUser, mqttPass, brokerIp);
     } else {

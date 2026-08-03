@@ -13,7 +13,7 @@ from database import get_session
 from models import Device, ProvisioningTicket, Telemetry, User
 from security import get_current_user_id, create_access_token, get_current_user
 
-MQTT_BROKER = "192.168.178.33"
+MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
 
 router = APIRouter(prefix="/api/device", tags=["Devices"])

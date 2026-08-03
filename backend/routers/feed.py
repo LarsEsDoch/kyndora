@@ -9,7 +9,7 @@ from security import get_current_user
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 
-MQTT_BROKER = "192.168.178.33"
+MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', 'admin123')
 

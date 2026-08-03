@@ -6,7 +6,7 @@ from sqlmodel import Session, select
 from database import engine
 from models import Device, Telemetry
 
-MQTT_BROKER = "192.168.178.33"
+MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
 
 

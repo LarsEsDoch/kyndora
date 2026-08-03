@@ -8,7 +8,7 @@ from sqlmodel import Session, select
 from database import engine
 from models import Device, User
 
-MQTT_BROKER = "192.168.178.33"
+MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', 'admin123')
 WEATHER_INTERVAL_SECONDS = 900
