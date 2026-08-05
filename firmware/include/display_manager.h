@@ -23,6 +23,9 @@ public:
 
     void setWifiState(WifiIconState state);
     void setTime(int hour, int minute);
+    void setWeather(float temp, int code, bool isDay, bool windy);
+    void setMessage(const String& text);
+    void setDoodle(const String& hexString);
 private:
     static constexpr int16_t TOP_BAR_Y = 0;
     static constexpr int16_t TOP_BAR_H = 34;
@@ -30,6 +33,17 @@ private:
     static constexpr int16_t TIME_Y = 34;
     static constexpr int16_t TIME_H = 110;
 
+    static constexpr int16_t WEATHER_Y = 144;
+    static constexpr int16_t WEATHER_H = 50;
+
+    static constexpr int16_t MESSAGE_Y = 194;
+    static constexpr int16_t MESSAGE_H = 44;
+
+    static constexpr int16_t IMAGES_Y = 238;
+    static constexpr int16_t IMAGES_H = 90;
+
+    static constexpr int16_t DOODLE_SIZE = 80;
+    static constexpr int16_t WIFI_ICON_TARGET_SIZE = 24;
 
     static constexpr uint16_t FULL_REFRESH_THRESHOLD = 20;
 
