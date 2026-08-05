@@ -19,6 +19,8 @@ public:
     DisplayManager(int8_t cs, int8_t dc, int8_t rst, int8_t busy);
 
     void begin();
+    void showSetupScreen();
+
     void setWifiState(WifiIconState state);
     void setTime(int hour, int minute);
 private:

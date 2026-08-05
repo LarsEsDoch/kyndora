@@ -11,6 +11,17 @@ void DisplayManager::begin() {
     _display.setTextColor(GxEPD_BLACK);
 }
 
+void DisplayManager::showSetupScreen() {
+    _display.setFullWindow();
+    _display.firstPage();
+    do {
+        _display.fillScreen(GxEPD_WHITE);
+        _display.setFont();
+        _display.setTextSize(2);
+        _display.setCursor(30, _display.height() / 2);
+        _display.print("Awaiting Setup via Bluetooth");
+    } while (_display.nextPage());
+}
 
 void DisplayManager::setWifiState(WifiIconState state) {
     if (_wifiInitialized && _wifiState == state) return;
