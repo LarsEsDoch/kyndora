@@ -30,6 +30,8 @@ public:
     void setLocationText(const String& text);
     void setLocationStale(bool stale);
 
+    void renderFull();
+
 private:
     static constexpr int16_t TOP_BAR_Y = 0;
     static constexpr int16_t TOP_BAR_H = 34;
@@ -107,7 +109,9 @@ private:
     void paintCountdown();
     void paintLocation();
 
+    String buildFreshnessText();
     const uint8_t* selectWeatherIcon() const;
     const uint8_t* wifiIconBitmap() const;
     void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, int16_t targetSize);
+    const uint8_t* locationIconBitmap() const;
 };

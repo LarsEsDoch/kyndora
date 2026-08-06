@@ -1,4 +1,5 @@
 #include "display_manager.h"
+#include "FreeSansBold36pt7b.h"
 #include "icons.h"
 
 DisplayManager::DisplayManager(int8_t cs, int8_t dc, int8_t rst, int8_t busy)
@@ -260,6 +261,35 @@ void DisplayManager::paintLocation() {
     _display.setCursor(startX + iconSize + gap - x1, LOCATION_Y + LOCATION_H / 2 + th / 2);
     _display.print(_locationText);
 }
+
+String DisplayManager::buildFreshnessText() {
+    if (!_hasMessageTimestamp) return "";
+
+    tm nowTm{};
+    if (!getLocalTime(&nowTm)) return "";
+
+    tm nowMidnight = nowTm;
+    nowMidnight.tm_hour = 0;
+    nowMidnight.tm_min = 0;
+    nowMidnight.tm_sec = 0;
+    time_t nowMidnightEpoch = mktime(&nowMidnight);
+
+    tm msgMidnight = _messageTm;
+    msgMidnight.tm_hour = 0;
+    msgMidnight.tm_min = 0;
+    msgMidnight.tm_sec = 0;
+    time_t msgMidnightEpoch = mktime(&msgMidnight);
+
+    long daysDiff = (long)((nowMidnightEpoch - msgMidnightEpoch) / 86400);
+
+    if (daysDiff <= 0) return "";
+    if (daysDiff == 1) return "Yesterday";
+
+    char buffer[20];
+    sprintf(buffer, "%02d:%02d %02d.%02d.", _messageTm.tm_hour, _messageTm.tm_min, _messageTm.tm_mday, _messageTm.tm_mon + 1);
+    return String(buffer);
+}
+
 const uint8_t* DisplayManager::selectWeatherIcon() const {
     int code = _weatherCode;
     bool isDay = _weatherIsDay;
@@ -319,3 +349,6 @@ void DisplayManager::drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y,
     }
 }
 
+const uint8_t* DisplayManager::locationIconBitmap() const {
+    return _locationStale ? ICON_LOCATION_OFF : ICON_LOCATION_ON;
+}
