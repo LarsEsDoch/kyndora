@@ -26,6 +26,10 @@ public:
     void setWeather(float temp, int code, bool isDay, bool windy);
     void setMessage(const String& text);
     void setDoodle(const String& hexString);
+    void setCountdownText(const String& text);
+    void setLocationText(const String& text);
+    void setLocationStale(bool stale);
+
 private:
     static constexpr int16_t TOP_BAR_Y = 0;
     static constexpr int16_t TOP_BAR_H = 34;
@@ -42,7 +46,15 @@ private:
     static constexpr int16_t IMAGES_Y = 238;
     static constexpr int16_t IMAGES_H = 90;
 
+    static constexpr int16_t COUNTDOWN_Y = 328;
+    static constexpr int16_t COUNTDOWN_H = 28;
+
+    static constexpr int16_t LOCATION_Y = 358;
+    static constexpr int16_t LOCATION_H = 40;
+
     static constexpr int16_t DOODLE_SIZE = 80;
+
+    static constexpr int16_t WEATHER_ICON_TARGET_SIZE = 40;
     static constexpr int16_t WIFI_ICON_TARGET_SIZE = 24;
 
     static constexpr uint16_t FULL_REFRESH_THRESHOLD = 20;
@@ -56,15 +68,46 @@ private:
     int _hour = 0;
     int _minute = 0;
 
+    bool _hasWeather = false;
+    float _weatherTemp = 0;
+    int _weatherCode = 0;
+    bool _weatherIsDay = true;
+    bool _weatherWindy = false;
+
+    String _message = "";
+    bool _hasMessageTimestamp = false;
+    tm _messageTm{};
+
+    uint8_t _doodleBuffer[800] = {};
+    bool _hasDoodle = false;
+
+    String _countdownText = "63 Days, 11 Hours and 11 Minutes";
+    String _locationText = "At home";
+
     uint16_t _partialUpdateCount = 0;
+
+    bool _locationStale = false;
 
     void partialRefresh(int16_t y, int16_t h, void (DisplayManager::*paintFn)());
     void registerPartialUpdate();
 
     void updateTopBar();
     void updateTimeRow();
+    void updateWeatherRow();
+    void updateMessageRow();
+    void updateImagesRow();
+    void updateCountdownRow();
+    void updateLocationRow();
+
     void paintTopBar();
     void paintTime();
+    void paintWeather();
+    void paintMessage();
+    void paintImages();
+    void paintCountdown();
+    void paintLocation();
+
+    const uint8_t* selectWeatherIcon() const;
     const uint8_t* wifiIconBitmap() const;
     void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, int16_t targetSize);
 };

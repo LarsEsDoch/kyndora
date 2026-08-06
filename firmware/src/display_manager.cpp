@@ -74,6 +74,21 @@ void DisplayManager::setDoodle(const String& hexString) {
     updateImagesRow();
 }
 
+void DisplayManager::setCountdownText(const String& text) {
+    _countdownText = text;
+    updateCountdownRow();
+}
+
+void DisplayManager::setLocationText(const String& text) {
+    _locationText = text;
+    updateLocationRow();
+}
+
+void DisplayManager::setLocationStale(bool stale) {
+    if (_locationStale == stale) return;
+    _locationStale = stale;
+    updateLocationRow();
+}
 
 void DisplayManager::partialRefresh(int16_t y, int16_t h, void (DisplayManager::*paintFn)()) {
     const int16_t w = _display.width();
@@ -100,6 +115,8 @@ void DisplayManager::updateTimeRow() { partialRefresh(TIME_Y, TIME_H, &DisplayMa
 void DisplayManager::updateWeatherRow() { partialRefresh(WEATHER_Y, WEATHER_H, &DisplayManager::paintWeather); }
 void DisplayManager::updateMessageRow() { partialRefresh(MESSAGE_Y, MESSAGE_H, &DisplayManager::paintMessage); }
 void DisplayManager::updateImagesRow() { partialRefresh(IMAGES_Y, IMAGES_H, &DisplayManager::paintImages); }
+void DisplayManager::updateCountdownRow() { partialRefresh(COUNTDOWN_Y, COUNTDOWN_H, &DisplayManager::paintCountdown); }
+void DisplayManager::updateLocationRow() { partialRefresh(LOCATION_Y, LOCATION_H, &DisplayManager::paintLocation); }
 
 void DisplayManager::renderFull() {
     _display.setFullWindow();
@@ -206,6 +223,43 @@ void DisplayManager::paintImages() {
     _display.drawBitmap(startX + DOODLE_SIZE + gap, imgY, _doodleBuffer, DOODLE_SIZE, DOODLE_SIZE, GxEPD_BLACK);
 }
 
+void DisplayManager::paintCountdown() {
+    if (_countdownText.length() == 0) return;
+
+    _display.setFont();
+    _display.setTextSize(1);
+
+    int16_t x1, y1;
+    uint16_t tw, th;
+    _display.getTextBounds(_countdownText, 0, 0, &x1, &y1, &tw, &th);
+
+    int16_t cursorX = (_display.width() - tw) / 2 - x1;
+    int16_t cursorY = COUNTDOWN_Y + COUNTDOWN_H / 2 + th / 2;
+
+    _display.setCursor(cursorX, cursorY);
+    _display.print(_countdownText);
+}
+
+void DisplayManager::paintLocation() {
+    if (_locationText.length() == 0) return;
+
+    _display.setFont();
+    _display.setTextSize(2);
+
+    int16_t x1, y1;
+    uint16_t tw, th;
+    _display.getTextBounds(_locationText, 0, 0, &x1, &y1, &tw, &th);
+
+    int16_t iconSize = 24;
+    int16_t gap = 10;
+    int16_t totalWidth = iconSize + gap + tw;
+    int16_t startX = (_display.width() - totalWidth) / 2;
+
+    drawIconBitmap(locationIconBitmap(), startX, LOCATION_Y + (LOCATION_H - iconSize) / 2, iconSize);
+
+    _display.setCursor(startX + iconSize + gap - x1, LOCATION_Y + LOCATION_H / 2 + th / 2);
+    _display.print(_locationText);
+}
 const uint8_t* DisplayManager::selectWeatherIcon() const {
     int code = _weatherCode;
     bool isDay = _weatherIsDay;
