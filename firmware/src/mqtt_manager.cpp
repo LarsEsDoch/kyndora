@@ -75,7 +75,7 @@ void MqttManager::publishHeartbeat() {
     String topic = "kyndora/" + _deviceId + "/heartbeat";
 
     mqttClient.publish(topic.c_str(), buffer);
-    Serial.println("Heartbeat published: " + String(buffer));
+    Serial.println("Heartbeat published!");
 }
 
 void MqttManager::sendTelemetry() {
@@ -99,7 +99,7 @@ void MqttManager::sendTelemetry() {
     String topic = "kyndora/" + _deviceId + "/telemetry";
 
     if (mqttClient.publish(topic.c_str(), buffer)) {
-        Serial.println("Telemetry sent: " + String(buffer));
+        Serial.println("Telemetry sent!");
     } else {
         Serial.println("Failed to send telemetry.");
     }
