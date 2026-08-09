@@ -165,7 +165,7 @@ void DisplayManager::paintTime() {
     _display.getTextBounds(buffer, 0, 0, &x1, &y1, &tw, &th);
 
     int16_t cursorX = (_display.width() - tw) / 2 - x1;
-    int16_t cursorY = TIME_Y + (TIME_H + th) / 2;
+    int16_t cursorY = centeredCursorY(TIME_Y, TIME_H, y1, th);
 
     _display.setCursor(cursorX, cursorY);
     _display.print(buffer);
@@ -188,10 +188,14 @@ void DisplayManager::paintWeather() {
     int16_t totalWidth = WEATHER_ICON_TARGET_SIZE + gap + tw;
     int16_t startX = (_display.width() - totalWidth) / 2;
     int16_t iconY = WEATHER_Y + (WEATHER_H - WEATHER_ICON_TARGET_SIZE) / 2;
+    // If icon is to low
+    // constexpr int16_t WEATHER_ICON_Y_OFFSET = -2;
+    // int16_t iconY = WEATHER_Y + (WEATHER_H - WEATHER_ICON_TARGET_SIZE) / 2 + WEATHER_ICON_Y_OFFSET;
 
     drawIconBitmap(icon, startX, iconY, WEATHER_ICON_TARGET_SIZE);
 
-    _display.setCursor(startX + WEATHER_ICON_TARGET_SIZE + gap - x1, WEATHER_Y + WEATHER_H / 2 + th / 2);
+    int16_t cursorY = centeredCursorY(WEATHER_Y, WEATHER_H, y1, th);
+    _display.setCursor(startX + WEATHER_ICON_TARGET_SIZE + gap - x1, cursorY);
     _display.print(tempText);
 }
 
@@ -206,7 +210,7 @@ void DisplayManager::paintMessage() {
     _display.getTextBounds(_message, 0, 0, &x1, &y1, &tw, &th);
 
     int16_t cursorX = (_display.width() - tw) / 2 - x1;
-    int16_t cursorY = MESSAGE_Y + MESSAGE_H / 2 + th / 2;
+    int16_t cursorY = centeredCursorY(MESSAGE_Y, MESSAGE_H, y1, th);
 
     _display.setCursor(cursorX, cursorY);
     _display.print(_message);
@@ -235,7 +239,7 @@ void DisplayManager::paintCountdown() {
     _display.getTextBounds(_countdownText, 0, 0, &x1, &y1, &tw, &th);
 
     int16_t cursorX = (_display.width() - tw) / 2 - x1;
-    int16_t cursorY = COUNTDOWN_Y + COUNTDOWN_H / 2 + th / 2;
+    int16_t cursorY = centeredCursorY(COUNTDOWN_Y, COUNTDOWN_H, y1, th);
 
     _display.setCursor(cursorX, cursorY);
     _display.print(_countdownText);
@@ -251,14 +255,15 @@ void DisplayManager::paintLocation() {
     uint16_t tw, th;
     _display.getTextBounds(_locationText, 0, 0, &x1, &y1, &tw, &th);
 
-    int16_t iconSize = 24;
+    int16_t iconSize = 28;
     int16_t gap = 10;
     int16_t totalWidth = iconSize + gap + tw;
     int16_t startX = (_display.width() - totalWidth) / 2;
 
     drawIconBitmap(locationIconBitmap(), startX, LOCATION_Y + (LOCATION_H - iconSize) / 2, iconSize);
 
-    _display.setCursor(startX + iconSize + gap - x1, LOCATION_Y + LOCATION_H / 2 + th / 2);
+    int16_t cursorY = centeredCursorY(LOCATION_Y, LOCATION_H, y1, th);
+    _display.setCursor(startX + iconSize + gap - x1, cursorY);
     _display.print(_locationText);
 }
 
@@ -329,6 +334,10 @@ const uint8_t* DisplayManager::wifiIconBitmap() const {
         case WIFI_ICON_STRENGTH_3: return ICON_WIFI_STRENGTH_3;
         default: return ICON_WIFI_STRENGTH_4;
     }
+}
+
+int16_t DisplayManager::centeredCursorY(int16_t rowY, int16_t rowH, int16_t y1, uint16_t th) const {
+    return rowY + (rowH - (int16_t)th) / 2 - y1;
 }
 
 void DisplayManager::drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, int16_t targetSize) {

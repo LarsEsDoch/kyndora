@@ -112,6 +112,7 @@ private:
     String buildFreshnessText();
     const uint8_t* selectWeatherIcon() const;
     const uint8_t* wifiIconBitmap() const;
+    int16_t centeredCursorY(int16_t rowY, int16_t rowH, int16_t y1, uint16_t th) const;
     void drawIconBitmap(const uint8_t* bitmap, int16_t x, int16_t y, int16_t targetSize);
     const uint8_t* locationIconBitmap() const;
 };
