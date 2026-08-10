@@ -10,7 +10,8 @@ from uuid import UUID
 
 import utils
 from database import get_session
-from models import Device, ProvisioningTicket, Telemetry, User
+from models import Device, ProvisioningTicket, Telemetry, User, DeviceSettings
+from schemas import DeviceSettingsUpdate
 from security import get_current_user_id, create_access_token, get_current_user
 
 MQTT_BROKER = "192.168.178.32"
@@ -22,6 +23,26 @@ router = APIRouter(prefix="/api/device", tags=["Devices"])
 class DeviceRegisterRequest(BaseModel):
     mac_address: str
     ticket_token: str
+
+
+def _require_owned_device(mac_address: str, session: Session, current_user_id) -> Device:
+    device = session.get(Device, mac_address)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    if str(device.user_id) != str(current_user_id):
+        raise HTTPException(status_code=403, detail="Not authorized for this device")
+    return device
+
+
+def _get_or_create_settings(session: Session, mac_address: str) -> DeviceSettings:
+    settings = session.get(DeviceSettings, mac_address)
+    if not settings:
+        settings = DeviceSettings(mac_address=mac_address)
+        session.add(settings)
+        session.commit()
+        session.refresh(settings)
+    return settings
+
 
 @router.get("")
 def list_user_devices(
@@ -40,12 +61,7 @@ def get_device_details(
         session: Session = Depends(get_session),
         current_user_id: str = Depends(get_current_user_id)
 ):
-    device = session.get(Device, mac_address)
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    if str(device.user_id) != str(current_user_id):
-        raise HTTPException(status_code=403, detail="Not authorized for this device")
+    device = _require_owned_device(mac_address, session, current_user_id)
 
     statement = select(Telemetry).where(Telemetry.device_mac == mac_address).order_by(Telemetry.created_at.desc())
     latest_telemetry = session.exec(statement).first()
@@ -70,6 +86,62 @@ def get_device_details(
         "telemetry": telemetry_data
     }
 
+
+@router.get("/{mac_address}/settings")
+def get_device_settings(
+        mac_address: str,
+        session: Session = Depends(get_session),
+        current_user_id: str = Depends(get_current_user_id)
+):
+    _require_owned_device(mac_address, session, current_user_id)
+    return _get_or_create_settings(session, mac_address)
+
+
+@router.patch("/{mac_address}/settings")
+def update_device_settings(
+        mac_address: str,
+        data: DeviceSettingsUpdate,
+        session: Session = Depends(get_session),
+        current_user_id: str = Depends(get_current_user_id)
+):
+    _require_owned_device(mac_address, session, current_user_id)
+    settings = _get_or_create_settings(session, mac_address)
+
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(settings, key, value)
+    settings.updated_at = datetime.now(timezone.utc)
+
+    session.add(settings)
+    session.commit()
+    session.refresh(settings)
+
+    led_keys = {"led_enabled", "led_brightness", "adaptive_brightness", "night_mode", "night_brightness"}
+    if led_keys & update_data.keys():
+        clean_mac = mac_address.replace(":", "").upper()
+        topic = f"kyndora/{clean_mac}/commands"
+        payload = json.dumps({
+            "command": "set_led_config",
+            "enabled": settings.led_enabled,
+            "brightness": settings.led_brightness,
+            "adaptive": settings.adaptive_brightness,
+            "night_mode": settings.night_mode,
+            "night_brightness": settings.night_brightness,
+        })
+        try:
+            publish.single(
+                topic=topic,
+                payload=payload,
+                hostname=MQTT_BROKER,
+                port=MQTT_PORT,
+                auth={"username": "admin", "password": os.getenv('MQTT_PASSWORD')}
+            )
+        except Exception as e:
+            print(f"MQTT Error (LED config): {e}")
+
+    return settings
+
+
 @router.post("/ticket", status_code=201)
 def generate_provisioning_ticket(
         session: Session = Depends(get_session),
@@ -91,7 +163,6 @@ def register_device(
         request: DeviceRegisterRequest,
         session: Session = Depends(get_session)
 ):
-
     statement = select(ProvisioningTicket).where(ProvisioningTicket.ticket_token == request.ticket_token)
     ticket = session.exec(statement).first()
 
@@ -110,6 +181,8 @@ def register_device(
     device_statement = select(Device).where(Device.mac_address == request.mac_address)
     device = session.exec(device_statement).first()
 
+    is_new_device = device is None
+
     if not device:
         device = Device(mac_address=request.mac_address, user_id=ticket.user_id)
         session.add(device)
@@ -125,6 +198,9 @@ def register_device(
     session.delete(ticket)
     session.commit()
 
+    if is_new_device:
+        _get_or_create_settings(session, request.mac_address)
+
     return {
         "device_jwt": device_jwt,
         "mqtt_username": str(ticket.user_id),
@@ -139,12 +215,7 @@ def send_device_command(
         session: Session = Depends(get_session),
         current_user_id: str = Depends(get_current_user_id)
 ):
-    device = session.get(Device, mac_address)
-    if not device:
-        raise HTTPException(status_code=404, detail="Device not found")
-
-    if device.user_id != current_user_id:
-        raise HTTPException(status_code=403, detail="Not authorized for this device")
+    _require_owned_device(mac_address, session, current_user_id)
 
     topic = f"kyndora/{mac_address.replace(':', '')}/commands"
 
@@ -160,46 +231,3 @@ def send_device_command(
         raise HTTPException(status_code=500, detail=f"Failed to send MQTT command: {str(e)}")
 
     return {"status": "success", "message": f"Command '{command}' sent to device {mac_address}"}
-
-@router.post("/display-timezone")
-def set_display_device_timezone(
-        iana_name: str,
-        session: Session = Depends(get_session),
-        current_user: User = Depends(get_current_user)
-):
-    if not current_user.partner_id:
-        raise HTTPException(status_code=400, detail="You don't have partner assigned.")
-
-    partner_device = session.exec(
-        select(Device).where(Device.user_id == current_user.partner_id)
-    ).first()
-
-    tz_string = utils.get_posix_tz(iana_name)
-
-    partner_device.timezone = tz_string
-    session.add(partner_device)
-    session.commit()
-
-    clean_mac = partner_device.mac_address.replace(":", "").upper()
-    topic = f"kyndora/{clean_mac}/commands"
-
-    payload = json.dumps({
-        "command": "set_timezone",
-        "tz": tz_string
-    })
-
-    try:
-        publish.single(
-            topic=topic,
-            payload=payload,
-            hostname=MQTT_BROKER,
-            port=MQTT_PORT,
-            auth={"username": "admin", "password": os.getenv('MQTT_PASSWORD')}
-        )
-    except Exception as e:
-        print(f"MQTT Error: {e}")
-
-    return {
-        "status": "success",
-        "message": f"Timezone changed to '{tz_string}' for your partner."
-    }
