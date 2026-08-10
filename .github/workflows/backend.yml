@@ -30,19 +30,17 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pip install pytest ruff
 
       - name: Lint and Format with Ruff
         run: |
-          ruff check .
-          ruff format --check .
+          python -m ruff check .
+          python -m ruff format --check .
 
       - name: Run Tests with pytest
-        run: pytest
+        run: python -m pytest
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -52,5 +50,5 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: false # Auf 'true' setzen, wenn du z. B. in die GHCR Container Registry pushen willst
+          push: false 
           tags: my-backend:latest
