@@ -1,6 +1,7 @@
 import os
-from sqlmodel import create_engine, Session, SQLModel
+
 from dotenv import load_dotenv
+from sqlmodel import Session, SQLModel, create_engine
 
 load_dotenv()
 
@@ -8,9 +9,11 @@ DB_URL = f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}@192.16
 
 engine = create_engine(DB_URL)
 
+
 def get_session():
     with Session(engine) as session:
         yield session
+
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)

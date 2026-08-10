@@ -1,19 +1,28 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session, select
 
 from database import get_session
 from models import User
-from schemas import UserCreate, Token
-from security import get_password_hash, verify_password, create_access_token, get_current_user_id
+from schemas import Token, UserCreate
+from security import (
+    create_access_token,
+    get_current_user_id,
+    get_password_hash,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["Authentification"])
+
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(user_data: UserCreate, session: Session = Depends(get_session)):
     statement = select(User).where(User.username == user_data.username)
     if session.exec(statement).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This user is already registered.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This user is already registered.",
+        )
 
     hashed_pwd = get_password_hash(user_data.password)
     new_user = User(username=user_data.username, password_hash=hashed_pwd)
@@ -24,8 +33,12 @@ def register_user(user_data: UserCreate, session: Session = Depends(get_session)
 
     return {"message": "Successfully registered user!", "user_id": new_user.id}
 
+
 @router.post("/login", response_model=Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
+):
     statement = select(User).where(User.username == form_data.username)
     user = session.exec(statement).first()
 
@@ -38,6 +51,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = D
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 @router.get("/me")
 def read_users_me(current_user_id: str = Depends(get_current_user_id)):

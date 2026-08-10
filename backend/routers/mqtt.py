@@ -1,7 +1,8 @@
+import os
+
+import jwt
 from fastapi import APIRouter, Response, status
 from pydantic import BaseModel
-import os
-import jwt
 
 router = APIRouter(prefix="/api/mqtt", tags=["MQTT"])
 
@@ -26,27 +27,30 @@ class MqttAclRequest(BaseModel):
 def authenticate_mqtt_client(request: MqttAuthRequest, response: Response):
     token = request.password
     username = request.username
-    secret = os.getenv('JWT_SECRET')
+    secret = os.getenv("JWT_SECRET")
 
     if not token:
         response.status_code = status.HTTP_401_UNAUTHORIZED
         return {"ok": False}
 
-    if username == "admin" and token == os.getenv('MQTT_PASSWORD'):
+    if username == "admin" and token == os.getenv("MQTT_PASSWORD"):
         return {"ok": True}
 
     try:
         payload = jwt.decode(token, secret, algorithms=["HS256"])
         sub = payload.get("sub", "")
 
-        if request.clientid and sub.replace(":", "").upper() == request.clientid.upper():
+        if (
+            request.clientid
+            and sub.replace(":", "").upper() == request.clientid.upper()
+        ):
             return {"ok": True}
 
         if payload:
             return {"ok": True}
 
     except Exception as e:
-        print(f"MQTT Auth failed: {str(e)}")
+        print(f"MQTT Auth failed: {e!s}")
 
     response.status_code = status.HTTP_401_UNAUTHORIZED
     return {"ok": False}

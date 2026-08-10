@@ -1,18 +1,17 @@
-import os
 import json
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from paho.mqtt import publish
-from sqlmodel import Session, select
-from pydantic import BaseModel
+import os
 from datetime import datetime, timezone
 from uuid import UUID
 
-import utils
+from fastapi import APIRouter, Depends, HTTPException
+from paho.mqtt import publish
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
 from database import get_session
-from models import Device, ProvisioningTicket, Telemetry, User, DeviceSettings
+from models import Device, DeviceSettings, ProvisioningTicket, Telemetry
 from schemas import DeviceSettingsUpdate
-from security import get_current_user_id, create_access_token, get_current_user
+from security import create_access_token, get_current_user_id
 
 MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
@@ -25,7 +24,9 @@ class DeviceRegisterRequest(BaseModel):
     ticket_token: str
 
 
-def _require_owned_device(mac_address: str, session: Session, current_user_id) -> Device:
+def _require_owned_device(
+    mac_address: str, session: Session, current_user_id
+) -> Device:
     device = session.get(Device, mac_address)
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -46,8 +47,7 @@ def _get_or_create_settings(session: Session, mac_address: str) -> DeviceSetting
 
 @router.get("")
 def list_user_devices(
-        session: Session = Depends(get_session),
-        current_user=Depends(get_current_user_id)
+    session: Session = Depends(get_session), current_user=Depends(get_current_user_id)
 ):
     statement = select(Device).where(Device.user_id == current_user)
     devices = session.exec(statement).all()
@@ -57,13 +57,17 @@ def list_user_devices(
 
 @router.get("/{mac_address}")
 def get_device_details(
-        mac_address: str,
-        session: Session = Depends(get_session),
-        current_user_id: str = Depends(get_current_user_id)
+    mac_address: str,
+    session: Session = Depends(get_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     device = _require_owned_device(mac_address, session, current_user_id)
 
-    statement = select(Telemetry).where(Telemetry.device_mac == mac_address).order_by(Telemetry.created_at.desc())
+    statement = (
+        select(Telemetry)
+        .where(Telemetry.device_mac == mac_address)
+        .order_by(Telemetry.created_at.desc())
+    )
     latest_telemetry = session.exec(statement).first()
 
     last_seen_str = "Never"
@@ -83,15 +87,15 @@ def get_device_details(
         "firmware_version": device.firmware_version,
         "battery_level": device.battery_level,
         "timezone": device.timezone,
-        "telemetry": telemetry_data
+        "telemetry": telemetry_data,
     }
 
 
 @router.get("/{mac_address}/settings")
 def get_device_settings(
-        mac_address: str,
-        session: Session = Depends(get_session),
-        current_user_id: str = Depends(get_current_user_id)
+    mac_address: str,
+    session: Session = Depends(get_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     _require_owned_device(mac_address, session, current_user_id)
     return _get_or_create_settings(session, mac_address)
@@ -99,10 +103,10 @@ def get_device_settings(
 
 @router.patch("/{mac_address}/settings")
 def update_device_settings(
-        mac_address: str,
-        data: DeviceSettingsUpdate,
-        session: Session = Depends(get_session),
-        current_user_id: str = Depends(get_current_user_id)
+    mac_address: str,
+    data: DeviceSettingsUpdate,
+    session: Session = Depends(get_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     _require_owned_device(mac_address, session, current_user_id)
     settings = _get_or_create_settings(session, mac_address)
@@ -116,25 +120,33 @@ def update_device_settings(
     session.commit()
     session.refresh(settings)
 
-    led_keys = {"led_enabled", "led_brightness", "adaptive_brightness", "night_mode", "night_brightness"}
+    led_keys = {
+        "led_enabled",
+        "led_brightness",
+        "adaptive_brightness",
+        "night_mode",
+        "night_brightness",
+    }
     if led_keys & update_data.keys():
         clean_mac = mac_address.replace(":", "").upper()
         topic = f"kyndora/{clean_mac}/commands"
-        payload = json.dumps({
-            "command": "set_led_config",
-            "enabled": settings.led_enabled,
-            "brightness": settings.led_brightness,
-            "adaptive": settings.adaptive_brightness,
-            "night_mode": settings.night_mode,
-            "night_brightness": settings.night_brightness,
-        })
+        payload = json.dumps(
+            {
+                "command": "set_led_config",
+                "enabled": settings.led_enabled,
+                "brightness": settings.led_brightness,
+                "adaptive": settings.adaptive_brightness,
+                "night_mode": settings.night_mode,
+                "night_brightness": settings.night_brightness,
+            }
+        )
         try:
             publish.single(
                 topic=topic,
                 payload=payload,
                 hostname=MQTT_BROKER,
                 port=MQTT_PORT,
-                auth={"username": "admin", "password": os.getenv('MQTT_PASSWORD')}
+                auth={"username": "admin", "password": os.getenv("MQTT_PASSWORD")},
             )
         except Exception as e:
             print(f"MQTT Error (LED config): {e}")
@@ -144,26 +156,24 @@ def update_device_settings(
 
 @router.post("/ticket", status_code=201)
 def generate_provisioning_ticket(
-        session: Session = Depends(get_session),
-        current_user_id: str = Depends(get_current_user_id)
+    session: Session = Depends(get_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     new_ticket = ProvisioningTicket(user_id=UUID(current_user_id))
     session.add(new_ticket)
     session.commit()
     session.refresh(new_ticket)
 
-    return {
-        "ticket_token": new_ticket.ticket_token,
-        "expires_in_minutes": 15
-    }
+    return {"ticket_token": new_ticket.ticket_token, "expires_in_minutes": 15}
 
 
 @router.post("/register")
 def register_device(
-        request: DeviceRegisterRequest,
-        session: Session = Depends(get_session)
+    request: DeviceRegisterRequest, session: Session = Depends(get_session)
 ):
-    statement = select(ProvisioningTicket).where(ProvisioningTicket.ticket_token == request.ticket_token)
+    statement = select(ProvisioningTicket).where(
+        ProvisioningTicket.ticket_token == request.ticket_token
+    )
     ticket = session.exec(statement).first()
 
     if not ticket:
@@ -193,7 +203,9 @@ def register_device(
     else:
         device.user_id = ticket.user_id
 
-    device_jwt = create_access_token(data={"sub": request.mac_address, "role": "device"})
+    device_jwt = create_access_token(
+        data={"sub": request.mac_address, "role": "device"}
+    )
 
     session.delete(ticket)
     session.commit()
@@ -204,16 +216,16 @@ def register_device(
     return {
         "device_jwt": device_jwt,
         "mqtt_username": str(ticket.user_id),
-        "mqtt_password": device_jwt
+        "mqtt_password": device_jwt,
     }
 
 
 @router.post("/{mac_address}/command")
 def send_device_command(
-        mac_address: str,
-        command: str,
-        session: Session = Depends(get_session),
-        current_user_id: str = Depends(get_current_user_id)
+    mac_address: str,
+    command: str,
+    session: Session = Depends(get_session),
+    current_user_id: str = Depends(get_current_user_id),
 ):
     _require_owned_device(mac_address, session, current_user_id)
 
@@ -225,9 +237,14 @@ def send_device_command(
             payload=command,
             hostname=MQTT_BROKER,
             port=MQTT_PORT,
-            auth={"username": "admin", "password": os.getenv('MQTT_PASSWORD')}
+            auth={"username": "admin", "password": os.getenv("MQTT_PASSWORD")},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send MQTT command: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to send MQTT command: {e!s}"
+        )
 
-    return {"status": "success", "message": f"Command '{command}' sent to device {mac_address}"}
+    return {
+        "status": "success",
+        "message": f"Command '{command}' sent to device {mac_address}",
+    }

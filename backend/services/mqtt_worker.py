@@ -1,8 +1,10 @@
 import json
 import os
-import paho.mqtt.client as mqtt
 from datetime import datetime, timezone
+
+import paho.mqtt.client as mqtt
 from sqlmodel import Session, select
+
 from database import engine
 from models import Device, Telemetry
 
@@ -20,7 +22,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
 
 def format_mac(mac: str) -> str:
     if len(mac) == 12 and ":" not in mac:
-        return ":".join(mac[i:i + 2] for i in range(0, 12, 2)).upper()
+        return ":".join(mac[i : i + 2] for i in range(0, 12, 2)).upper()
     return mac.upper()
 
 
@@ -54,8 +56,12 @@ def on_message(client, userdata, msg):
                     device = session.get(Device, db_mac)
                     if device:
                         device.status = payload.get("status", device.status)
-                        device.firmware_version = payload.get("fw_version", device.firmware_version)
-                        device.battery_level = payload.get("battery_level", device.battery_level)
+                        device.firmware_version = payload.get(
+                            "fw_version", device.firmware_version
+                        )
+                        device.battery_level = payload.get(
+                            "battery_level", device.battery_level
+                        )
                         device.last_seen_at = datetime.now(timezone.utc)
                         session.add(device)
                         session.commit()
@@ -67,23 +73,31 @@ def on_message(client, userdata, msg):
                         telemetry.rssi = payload.get("rssi", telemetry.rssi)
                         telemetry.ssid = payload.get("ssid", telemetry.ssid)
                         telemetry.uptime_s = payload.get("uptime_s", telemetry.uptime_s)
-                        telemetry.free_heap = payload.get("free_heap", telemetry.free_heap)
-                        telemetry.core_temp = payload.get("core_temp", telemetry.core_temp)
-                        telemetry.battery_v = payload.get("battery_v", telemetry.battery_v)
-                        telemetry.battery_percent = payload.get("battery_percent", telemetry.battery_percent)
+                        telemetry.free_heap = payload.get(
+                            "free_heap", telemetry.free_heap
+                        )
+                        telemetry.core_temp = payload.get(
+                            "core_temp", telemetry.core_temp
+                        )
+                        telemetry.battery_v = payload.get(
+                            "battery_v", telemetry.battery_v
+                        )
+                        telemetry.battery_percent = payload.get(
+                            "battery_percent", telemetry.battery_percent
+                        )
                         session.add(telemetry)
                         session.commit()
 
     except json.JSONDecodeError:
         pass
     except Exception as e:
-        print(f"Error handling incoming MQTT message: {str(e)}")
+        print(f"Error handling incoming MQTT message: {e!s}")
 
 
 def init_mqtt_worker():
     client = mqtt.Client(client_id="kyndora_backend_worker")
 
-    admin_password = os.getenv('MQTT_PASSWORD', 'admin123')
+    admin_password = os.getenv("MQTT_PASSWORD", "admin123")
     client.username_pw_set("admin", admin_password)
 
     client.on_connect = on_connect

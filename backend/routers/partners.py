@@ -1,25 +1,27 @@
-import os
 import json
+import os
 from datetime import datetime, timezone
 
-import paho.mqtt.publish as publish
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+from paho.mqtt import publish
 from sqlmodel import Session, select
 
 import utils
 from database import get_session
-from models import User, PartnerRequest, Device, MorningQuoteSettings
-from schemas import MoodUpdate, ReturnTimeUpdate, MorningQuotesUpdate, TimezoneUpdate
+from models import Device, MorningQuoteSettings, PartnerRequest, User
+from schemas import MoodUpdate, MorningQuotesUpdate, ReturnTimeUpdate, TimezoneUpdate
 from security import get_current_user
 
 router = APIRouter(prefix="/api/partners", tags=["partners"])
 
 MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
-MQTT_PASSWORD = os.getenv('MQTT_PASSWORD', 'admin123')
+MQTT_PASSWORD = os.getenv("MQTT_PASSWORD", "admin123")
 
 
-def _push_to_partner_device(session: Session, current_user: User, command: str, extra: dict):
+def _push_to_partner_device(
+    session: Session, current_user: User, command: str, extra: dict
+):
     if not current_user.partner_id:
         return
 
@@ -39,7 +41,7 @@ def _push_to_partner_device(session: Session, current_user: User, command: str, 
             payload=json.dumps(body),
             hostname=MQTT_BROKER,
             port=MQTT_PORT,
-            auth={"username": "admin", "password": MQTT_PASSWORD}
+            auth={"username": "admin", "password": MQTT_PASSWORD},
         )
     except Exception as e:
         print(f"MQTT Error ({command}): {e}")
@@ -49,9 +51,11 @@ def _push_to_partner_device(session: Session, current_user: User, command: str, 
 def send_partner_request(
     target_username: str,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    target_user = session.exec(select(User).where(User.username == target_username)).first()
+    target_user = session.exec(
+        select(User).where(User.username == target_username)
+    ).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -65,7 +69,7 @@ def send_partner_request(
         select(PartnerRequest).where(
             PartnerRequest.sender_id == current_user.id,
             PartnerRequest.receiver_id == target_user.id,
-            PartnerRequest.status == "pending"
+            PartnerRequest.status == "pending",
         )
     ).first()
     if existing:
@@ -75,14 +79,17 @@ def send_partner_request(
     session.add(req)
     session.commit()
 
-    return {"status": "success", "message": f"Partner request sent to {target_username}"}
+    return {
+        "status": "success",
+        "message": f"Partner request sent to {target_username}",
+    }
 
 
 @router.post("/accept/{request_id}")
 def accept_partner_request(
     request_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     req = session.get(PartnerRequest, request_id)
     if not req or req.receiver_id != current_user.id:
@@ -105,13 +112,16 @@ def accept_partner_request(
     session.add(req)
     session.commit()
 
-    return {"status": "success", "message": f"You are now partners with {sender.username}"}
+    return {
+        "status": "success",
+        "message": f"You are now partners with {sender.username}",
+    }
 
 
 @router.get("/status")
 def get_partner_status(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     if not current_user.partner_id:
         return {"has_partner": False}
@@ -134,7 +144,7 @@ def get_partner_status(
 def update_mood(
     data: MoodUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     current_user.mood = data.mood
     current_user.is_sleeping = data.is_sleeping
@@ -142,10 +152,15 @@ def update_mood(
     session.add(current_user)
     session.commit()
 
-    _push_to_partner_device(session, current_user, "set_mood", {
-        "mood": data.mood,
-        "is_sleeping": data.is_sleeping,
-    })
+    _push_to_partner_device(
+        session,
+        current_user,
+        "set_mood",
+        {
+            "mood": data.mood,
+            "is_sleeping": data.is_sleeping,
+        },
+    )
 
     return {"status": "success", "message": "Mood updated."}
 
@@ -154,15 +169,20 @@ def update_mood(
 def set_return_time(
     data: ReturnTimeUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     current_user.return_time = data.timestamp
     session.add(current_user)
     session.commit()
 
-    _push_to_partner_device(session, current_user, "set_return_time", {
-        "timestamp": data.timestamp.isoformat(),
-    })
+    _push_to_partner_device(
+        session,
+        current_user,
+        "set_return_time",
+        {
+            "timestamp": data.timestamp.isoformat(),
+        },
+    )
 
     return {"status": "success", "message": "Return time updated."}
 
@@ -170,7 +190,7 @@ def set_return_time(
 @router.get("/quotes")
 def get_morning_quotes(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     settings = session.get(MorningQuoteSettings, current_user.id)
     if not settings:
@@ -182,7 +202,7 @@ def get_morning_quotes(
 def set_morning_quotes(
     data: MorningQuotesUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     settings = session.get(MorningQuoteSettings, current_user.id)
     if not settings:
@@ -196,11 +216,16 @@ def set_morning_quotes(
     session.add(settings)
     session.commit()
 
-    _push_to_partner_device(session, current_user, "set_morning_quotes", {
-        "wake_hour": data.wake_hour,
-        "wake_minute": data.wake_minute,
-        "quotes": data.quotes,
-    })
+    _push_to_partner_device(
+        session,
+        current_user,
+        "set_morning_quotes",
+        {
+            "wake_hour": data.wake_hour,
+            "wake_minute": data.wake_minute,
+            "quotes": data.quotes,
+        },
+    )
 
     return {"status": "success", "message": "Morning quotes saved."}
 
@@ -209,7 +234,7 @@ def set_morning_quotes(
 def set_timezone(
     data: TimezoneUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     current_user.timezone_auto_detect = data.auto_detect
     current_user.iana_timezone = data.iana_timezone
@@ -227,7 +252,9 @@ def set_timezone(
             partner_device.timezone = tz_string
             session.add(partner_device)
             session.commit()
-            _push_to_partner_device(session, current_user, "set_timezone", {"tz": tz_string})
+            _push_to_partner_device(
+                session, current_user, "set_timezone", {"tz": tz_string}
+            )
 
     return {"status": "success", "message": "Timezone settings updated."}
 
@@ -235,7 +262,7 @@ def set_timezone(
 @router.post("/miss-you")
 def send_miss_you(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     if not current_user.partner_id:
         raise HTTPException(status_code=400, detail="No partner assigned")

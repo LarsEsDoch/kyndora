@@ -1,9 +1,9 @@
-from typing import Optional, List
-from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import JSON
-from datetime import datetime, timedelta, timezone
 import secrets
+from datetime import datetime, timedelta, timezone
+from uuid import UUID, uuid4
+
+from sqlalchemy import JSON
+from sqlmodel import Column, Field, SQLModel
 
 
 class User(SQLModel, table=True):
@@ -11,20 +11,20 @@ class User(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     username: str = Field(index=True, unique=True)
     password_hash: str
-    partner_id: Optional[UUID] = Field(default=None, foreign_key="users.id")
+    partner_id: UUID | None = Field(default=None, foreign_key="users.id")
 
-    latitude: Optional[float] = Field(default=None)
-    longitude: Optional[float] = Field(default=None)
-    location_updated_at: Optional[datetime] = Field(default=None)
+    latitude: float | None = Field(default=None)
+    longitude: float | None = Field(default=None)
+    location_updated_at: datetime | None = Field(default=None)
 
     timezone_auto_detect: bool = Field(default=True)
-    iana_timezone: Optional[str] = Field(default=None)
+    iana_timezone: str | None = Field(default=None)
 
-    mood: Optional[str] = Field(default=None)
+    mood: str | None = Field(default=None)
     is_sleeping: bool = Field(default=False)
-    status_updated_at: Optional[datetime] = Field(default=None)
+    status_updated_at: datetime | None = Field(default=None)
 
-    return_time: Optional[datetime] = Field(default=None)
+    return_time: datetime | None = Field(default=None)
 
 
 class Device(SQLModel, table=True):
@@ -32,11 +32,11 @@ class Device(SQLModel, table=True):
     mac_address: str = Field(primary_key=True)
     name: str = Field(default=mac_address)
     user_id: UUID = Field(foreign_key="users.id")
-    firmware_version: Optional[str] = None
+    firmware_version: str | None = None
     status: str = Field(default="offline")
-    battery_level: Optional[int] = None
-    last_seen_at: Optional[datetime] = None
-    timezone: Optional[str] = Field(default="CET-1CEST,M3.5.0,M10.5.0/3")
+    battery_level: int | None = None
+    last_seen_at: datetime | None = None
+    timezone: str | None = Field(default="CET-1CEST,M3.5.0,M10.5.0/3")
 
 
 class DeviceSettings(SQLModel, table=True):
@@ -72,13 +72,15 @@ class MorningQuoteSettings(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id", primary_key=True)
     wake_hour: int = Field(default=7)
     wake_minute: int = Field(default=0)
-    quotes: List[str] = Field(default_factory=list, sa_column=Column(JSON))
+    quotes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ProvisioningTicket(SQLModel, table=True):
     __tablename__ = "provisioning_tickets"
-    ticket_token: str = Field(default_factory=lambda: secrets.token_hex(16), primary_key=True)
+    ticket_token: str = Field(
+        default_factory=lambda: secrets.token_hex(16), primary_key=True
+    )
     user_id: UUID = Field(foreign_key="users.id")
     expires_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -87,7 +89,7 @@ class ProvisioningTicket(SQLModel, table=True):
 
 class PartnerRequest(SQLModel, table=True):
     __tablename__ = "partner_requests"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     sender_id: UUID = Field(foreign_key="users.id")
     receiver_id: UUID = Field(foreign_key="users.id")
     status: str = Field(default="pending")
@@ -96,7 +98,7 @@ class PartnerRequest(SQLModel, table=True):
 
 class ContentFeed(SQLModel, table=True):
     __tablename__ = "content_feed"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     sender_id: UUID = Field(foreign_key="users.id")
     receiver_id: UUID = Field(foreign_key="users.id")
     content_type: str
@@ -107,13 +109,15 @@ class ContentFeed(SQLModel, table=True):
 
 class Telemetry(SQLModel, table=True):
     __tablename__ = "telemetry"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     device_mac: str = Field(foreign_key="devices.mac_address", index=True)
-    rssi: Optional[int] = None
-    ssid: Optional[str] = None
-    uptime_s: Optional[int] = None
-    free_heap: Optional[int] = None
-    core_temp: Optional[float] = None
-    battery_v: Optional[float] = None
-    battery_percent: Optional[int] = None
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), index=True)
+    rssi: int | None = None
+    ssid: str | None = None
+    uptime_s: int | None = None
+    free_heap: int | None = None
+    core_temp: float | None = None
+    battery_v: float | None = None
+    battery_percent: int | None = None
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc), index=True
+    )
