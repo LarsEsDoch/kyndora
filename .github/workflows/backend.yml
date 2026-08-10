@@ -1,0 +1,56 @@
+name: FastAPI Backend CI/CD
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest ruff
+
+      - name: Lint and Format with Ruff
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Run Tests with pytest
+        run: pytest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false # Auf 'true' setzen, wenn du z. B. in die GHCR Container Registry pushen willst
+          tags: my-backend:latest
