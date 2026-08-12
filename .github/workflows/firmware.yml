@@ -48,6 +48,19 @@ jobs:
           path: firmware/.pio/build/*/*.bin
           retention-days: 7
 
+      - name: Update Rolling Pre-Release (Beta)
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: beta
+          name: "Beta / Development Build"
+          body: "Automatischer Build vom neuesten Commit. Letztes Update: ${{ github.event.head_commit.message }}"
+          prerelease: true
+          make_latest: false
+          files: firmware/.pio/build/*/*.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
