@@ -57,7 +57,7 @@ jobs:
           body: "Automatic Build of newest commit. Last Update: ${{ github.event.head_commit.message }}"
           prerelease: true
           make_latest: false
-          allowUpdates: true
+          overwrite_files: true
           files: firmware/.pio/build/*/*.bin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
