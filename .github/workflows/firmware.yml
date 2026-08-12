@@ -54,7 +54,7 @@ jobs:
         with:
           tag_name: beta
           name: "Beta / Development Build"
-          body: "Automatischer Build vom neuesten Commit. Letztes Update: ${{ github.event.head_commit.message }}"
+          body: "Automatic Build of newest commit. Last Update: ${{ github.event.head_commit.message }}"
           prerelease: true
           make_latest: false
           files: firmware/.pio/build/*/*.bin
