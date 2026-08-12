@@ -3,6 +3,8 @@ name: FastAPI Backend CI/CD
 on:
   push:
     branches: [ main, master ]
+    tags:
+      - 'v*'
     paths:
       - 'backend/**'
       - '.github/workflows/backend.yml'
@@ -65,4 +67,6 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repository_owner.outputs.owner }}/kyndora-backend:latest
+            ${{ github.ref_type == 'tag' && format('ghcr.io/{0}/kyndora-backend:latest', steps.repository_owner.outputs.owner) || '' }}
+            ${{ github.ref_type == 'tag' && format('ghcr.io/{0}/kyndora-backend:{1}', steps.repository_owner.outputs.owner, github.ref_name) || '' }}
+            ${{ github.ref_type == 'branch' && format('ghcr.io/{0}/kyndora-backend:beta', steps.repository_owner.outputs.owner) || '' }}
