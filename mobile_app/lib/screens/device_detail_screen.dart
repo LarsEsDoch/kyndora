@@ -1,7 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../constants.dart';
 
 class DeviceDetailScreen extends StatefulWidget {
   final String token;
@@ -35,12 +32,12 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
 
   bool _autoUpdate = true;
   TimeOfDay _updateTime = const TimeOfDay(hour: 3, minute: 0);
-  String _firmwareVersion = "1.0.4";
-  String _currentWiFi = "HomeNetwork_5G";
-  String _WiFiStrength = "Perfect";
-  String _uptime = "20 Days, 5 Hours and 3 Minutes";
-  String _temperature = "26.3°C";
-  String _lastSeen = "23.05.2025 at 18:50";
+  final String _firmwareVersion = "1.0.4";
+  final String _currentWiFi = "HomeNetwork_5G";
+  final String _WiFiStrength = "Perfect";
+  final String _uptime = "20 Days, 5 Hours and 3 Minutes";
+  final String _temperature = "26.3°C";
+  final String _lastSeen = "23.05.2025 at 18:50";
 
   bool _ledEnabled = true;
   double _ledBrightness = 80.0;
