@@ -11,7 +11,7 @@ on:
   pull_request:
     branches: [ main, master ]
     paths:
-      - 'app/**'
+      - 'mobile_app/**'
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: app
+        working-directory: mobile_app
 
     steps:
       - name: Checkout Code
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: flutter-apk
-          path: app/build/app/outputs/flutter-apk/*.apk
+          path: mobile_app/build/app/outputs/flutter-apk/*.apk
           retention-days: 7
 
       - name: Deploy PWA to GitHub Pages
@@ -71,7 +71,7 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: app/build/web 
+          publish_dir: mobile_app/build/web 
 
       - name: Update Rolling Pre-Release (Beta)
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -84,8 +84,8 @@ jobs:
           make_latest: false
           overwrite_files: true
           files: |
-            app/build/app/outputs/flutter-apk/*.apk
-            app/kyndora-web.zip
+            mobile_app/build/app/outputs/flutter-apk/*.apk
+            mobile_app/kyndora-web.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -94,7 +94,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: |
-            app/build/app/outputs/flutter-apk/*.apk
-            app/kyndora-web.zip
+            mobile_app/build/app/outputs/flutter-apk/*.apk
+            mobile_app/kyndora-web.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
