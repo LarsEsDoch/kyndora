@@ -6,7 +6,7 @@ on:
     tags:
       - 'v*'
     paths:
-      - 'app/**'
+      - 'mobile_app/**'
       - '.github/workflows/app.yml'
   pull_request:
     branches: [ main, master ]
