@@ -6,11 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from paho.mqtt import publish
 from sqlmodel import Session, select
 
-import utils
 from database import get_session
 from models import Device, MorningQuoteSettings, PartnerRequest, User
 from schemas import MoodUpdate, MorningQuotesUpdate, ReturnTimeUpdate, TimezoneUpdate
 from security import get_current_user
+from services.timezone_service import resolve_and_push_partner_timezone
 
 router = APIRouter(prefix="/api/partners", tags=["partners"])
 
@@ -236,27 +236,23 @@ def set_timezone(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
+    if not data.auto_detect and not data.iana_timezone:
+        raise HTTPException(
+            status_code=400,
+            detail="iana_timezone is required when auto_detect is disabled.",
+        )
+
     current_user.timezone_auto_detect = data.auto_detect
-    current_user.iana_timezone = data.iana_timezone
-    session.add(current_user)
-    session.commit()
+    if not data.auto_detect:
+        current_user.iana_timezone = data.iana_timezone
 
-    if not data.auto_detect and data.iana_timezone and current_user.partner_id:
-        tz_string = utils.get_posix_tz(data.iana_timezone)
+    resolved_tz = resolve_and_push_partner_timezone(session, current_user)
 
-        partner_device = session.exec(
-            select(Device).where(Device.user_id == current_user.partner_id)
-        ).first()
-
-        if partner_device:
-            partner_device.timezone = tz_string
-            session.add(partner_device)
-            session.commit()
-            _push_to_partner_device(
-                session, current_user, "set_timezone", {"tz": tz_string}
-            )
-
-    return {"status": "success", "message": "Timezone settings updated."}
+    return {
+        "status": "success",
+        "message": "Timezone settings updated.",
+        "resolved_timezone": resolved_tz,
+    }
 
 
 @router.post("/miss-you")

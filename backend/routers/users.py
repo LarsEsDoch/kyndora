@@ -7,6 +7,7 @@ from database import get_session
 from models import User
 from schemas import LocationUpdate
 from security import get_current_user
+from services.timezone_service import resolve_and_push_partner_timezone
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -24,4 +25,10 @@ def update_location(
     session.add(current_user)
     session.commit()
 
-    return {"status": "success", "message": "Location updated."}
+    resolved_tz = resolve_and_push_partner_timezone(session, current_user)
+
+    return {
+        "status": "success",
+        "message": "Location updated.",
+        "resolved_timezone": resolved_tz,
+    }

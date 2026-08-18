@@ -1,18 +1,17 @@
-import os
 import json
-
-from fastapi import APIRouter, Depends, HTTPException, status
-from paho.mqtt import publish
-from sqlmodel import Session, select
-from pydantic import BaseModel
+import os
 from datetime import datetime, timezone
 from uuid import UUID
 
-import utils
+from fastapi import APIRouter, Depends, HTTPException
+from paho.mqtt import publish
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
 from database import get_session
-from models import Device, ProvisioningTicket, Telemetry, User, DeviceSettings
+from models import Device, DeviceSettings, ProvisioningTicket, Telemetry
 from schemas import DeviceSettingsUpdate
-from security import get_current_user_id, create_access_token, get_current_user
+from security import create_access_token, get_current_user_id
 
 MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
@@ -242,7 +241,7 @@ def send_device_command(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to send MQTT command: {str(e)}"
+            status_code=500, detail=f"Failed to send MQTT command: {e!s}"
         )
 
     return {

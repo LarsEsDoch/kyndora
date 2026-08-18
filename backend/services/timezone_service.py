@@ -1,6 +1,5 @@
 import json
 import os
-from typing import Optional
 
 from paho.mqtt import publish
 from sqlmodel import Session, select
@@ -33,8 +32,8 @@ def _push_timezone_to_device(device: Device, tz_string: str):
         print(f"MQTT Error (set_timezone): {e}")
 
 
-def resolve_and_push_partner_timezone(session: Session, user: User) -> Optional[str]:
-    iana_name: Optional[str] = None
+def resolve_and_push_partner_timezone(session: Session, user: User) -> str | None:
+    iana_name: str | None = None
 
     if user.timezone_auto_detect:
         if user.latitude is None or user.longitude is None:
