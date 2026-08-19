@@ -56,9 +56,7 @@ def on_message(client, userdata, msg):
                     device = session.get(Device, db_mac)
                     if device:
                         device.status = payload.get("status", device.status)
-                        device.firmware_version = payload.get(
-                            "fw_version", device.firmware_version
-                        )
+                        device.uptime_s = payload.get("uptime_s", device.uptime_s)
                         device.battery_level = payload.get(
                             "battery_level", device.battery_level
                         )
@@ -67,12 +65,15 @@ def on_message(client, userdata, msg):
                         session.commit()
 
                 elif msg_type == "telemetry":
+                    device = session.get(Device, db_mac)
                     statement = select(Telemetry).where(Telemetry.device_mac == db_mac)
                     telemetry = session.exec(statement).first()
                     if telemetry:
                         telemetry.rssi = payload.get("rssi", telemetry.rssi)
                         telemetry.ssid = payload.get("ssid", telemetry.ssid)
-                        telemetry.uptime_s = payload.get("uptime_s", telemetry.uptime_s)
+                        device.firmware_version = payload.get(
+                            "fw_version", device.firmware_version
+                        )
                         telemetry.free_heap = payload.get(
                             "free_heap", telemetry.free_heap
                         )

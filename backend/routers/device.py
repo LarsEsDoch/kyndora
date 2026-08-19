@@ -87,6 +87,7 @@ def get_device_details(
         "firmware_version": device.firmware_version,
         "battery_level": device.battery_level,
         "timezone": device.timezone,
+        "uptime_s": device.uptime_s,
         "telemetry": telemetry_data,
     }
 

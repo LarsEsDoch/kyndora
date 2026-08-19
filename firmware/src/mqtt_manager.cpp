@@ -65,7 +65,7 @@ void MqttManager::publishHeartbeat() {
 
     JsonDocument doc;
     doc["status"] = "online";
-    doc["fw_version"] = FW_VERSION;
+    doc["uptime_s"] = millis() / 1000;
 
     doc["battery_level"] = 85;
 
@@ -86,7 +86,7 @@ void MqttManager::sendTelemetry() {
     doc["rssi"] = WiFi.RSSI();
     doc["ssid"] = WiFi.SSID();
 
-    doc["uptime_s"] = millis() / 1000;
+    doc["fw_version"] = FW_VERSION;
     doc["free_heap"] = ESP.getFreeHeap();
     doc["core_temp"] = temperatureRead();
 

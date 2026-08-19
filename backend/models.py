@@ -32,6 +32,7 @@ class Device(SQLModel, table=True):
     mac_address: str = Field(primary_key=True)
     name: str = Field(default=mac_address)
     user_id: UUID = Field(foreign_key="users.id")
+    uptime_s: int | None = None
     firmware_version: str | None = None
     status: str = Field(default="offline")
     battery_level: int | None = None
@@ -113,7 +114,6 @@ class Telemetry(SQLModel, table=True):
     device_mac: str = Field(foreign_key="devices.mac_address", index=True)
     rssi: int | None = None
     ssid: str | None = None
-    uptime_s: int | None = None
     free_heap: int | None = None
     core_temp: float | None = None
     battery_v: float | None = None
