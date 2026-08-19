@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import '../constants.dart';
 
 class PartnerTab extends StatefulWidget {
   final String token;
@@ -10,8 +13,18 @@ class PartnerTab extends StatefulWidget {
 }
 
 class _PartnerTabState extends State<PartnerTab> {
+  bool _isLoading = true;
   bool _hasPartner = false;
+  String? _partnerUsername;
+  String? _partnerMood;
+  bool _partnerIsSleeping = false;
+  String? _partnerReturnTime;
   final _usernameController = TextEditingController();
+
+  Map<String, String> get _authHeaders => {
+    'Authorization': 'Bearer ${widget.token}',
+    'Content-Type': 'application/json',
+  };
 
   @override
   void initState() {
@@ -20,24 +33,123 @@ class _PartnerTabState extends State<PartnerTab> {
   }
 
   Future<void> _checkPartnerStatus() async {
+    setState(() => _isLoading = true);
     try {
-      //FETCH: http.get('$backendUrl/api/partners/status')
-      await Future.delayed(const Duration(milliseconds: 300));
-      setState(() => _hasPartner = false);
+      final response = await http.get(
+        Uri.parse('$backendUrl/api/partners/status'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _hasPartner = data['has_partner'] ?? false;
+          if (_hasPartner) {
+            _partnerUsername = data['username'];
+            _partnerMood = data['mood'];
+            _partnerIsSleeping = data['is_sleeping'] ?? false;
+            _partnerReturnTime = data['return_time'];
+          }
+        });
+      }
     } catch (e) {
-      throw Exception(e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load partner status: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _triggerAction(String action, [Map<String, dynamic>? data]) {
-    //POST: http.post('$backendUrl/api/partners/action?type=$action', body: jsonEncode(data))
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action $action sent.')));
+  Future<void> _addPartner() async {
+    if (_usernameController.text.isEmpty) return;
+    try {
+      final response = await http.post(
+        Uri.parse('$backendUrl/api/partners/request?target_username=${Uri.encodeComponent(_usernameController.text)}'),
+        headers: _authHeaders,
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Partner request sent to ${_usernameController.text}.')));
+        _usernameController.clear();
+      } else {
+        final body = jsonDecode(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(body['detail'] ?? 'Request failed.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
-  void _addPartner() {
-    if (_usernameController.text.isNotEmpty) {
-      //POST: http.post('$backendUrl/api/partners/request?target=${_usernameController.text}')
-      setState(() => _hasPartner = true);
+  Future<void> _triggerAction(String action, [Map<String, dynamic>? data]) async {
+    try {
+      http.Response response;
+      switch (action) {
+        case 'send_message':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/feed/?content_type=text&payload=${Uri.encodeComponent(data?['text'] ?? '')}'),
+            headers: _authHeaders,
+          );
+          break;
+        case 'set_return_time':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/partners/return-time'),
+            headers: _authHeaders,
+            body: jsonEncode({'timestamp': data?['timestamp']}),
+          );
+          break;
+        case 'set_timezone':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/partners/timezone'),
+            headers: _authHeaders,
+            body: jsonEncode({
+              'auto_detect': data?['auto'],
+              'iana_timezone': data?['auto'] == true ? null : data?['timezone'],
+            }),
+          );
+          break;
+        case 'log_status':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/partners/mood'),
+            headers: _authHeaders,
+            body: jsonEncode({'mood': data?['mood'], 'is_sleeping': data?['sleeping']}),
+          );
+          break;
+        case 'save_quotes':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/partners/quotes'),
+            headers: _authHeaders,
+            body: jsonEncode({
+              'wake_hour': data?['wake_hour'],
+              'wake_minute': data?['wake_minute'],
+              'quotes': data?['quotes'],
+            }),
+          );
+          break;
+        case 'miss_you':
+          response = await http.post(
+            Uri.parse('$backendUrl/api/partners/miss-you'),
+            headers: _authHeaders,
+          );
+          break;
+        default:
+          return;
+      }
+
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action "$action" sent.')));
+        if (action == 'set_return_time' || action == 'log_status') {
+          _checkPartnerStatus();
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action "$action" failed (${response.statusCode}).')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -67,7 +179,7 @@ class _PartnerTabState extends State<PartnerTab> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Draw Doodle"),
-        content: const SizedBox(width: 260, height: 280, child: DoodleCanvas()),
+        content: SizedBox(width: 260, height: 280, child: DoodleCanvas(token: widget.token)),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))],
       ),
     );
@@ -120,7 +232,7 @@ class _PartnerTabState extends State<PartnerTab> {
   }
 
   void _showMoodSleepDialog() {
-    String mood = "Happy";
+    String mood = _partnerMood ?? "Happy";
     bool isSleeping = false;
     showDialog(
       context: context,
@@ -133,7 +245,7 @@ class _PartnerTabState extends State<PartnerTab> {
               DropdownButton<String>(
                 value: mood,
                 isExpanded: true,
-                items: ["Happy", "Sad", "Tired", "Stressed"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                items: ["Happy", "Sad", "Tired", "Stressed", "Angry"].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) => setDialogState(() => mood = v!),
               ),
               SwitchListTile(title: const Text("Going to sleep"), value: isSleeping, onChanged: (v) => setDialogState(() => isSleeping = v)),
@@ -154,10 +266,28 @@ class _PartnerTabState extends State<PartnerTab> {
     );
   }
 
-  void _showQuotesDialog() {
+  void _showQuotesDialog() async {
     TimeOfDay wakeTime = const TimeOfDay(hour: 7, minute: 0);
-    List<String> quotes = ["Good morning!", "Have a great day!"];
+    List<String> quotes = [];
     final quoteController = TextEditingController();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$backendUrl/api/partners/quotes'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        wakeTime = TimeOfDay(hour: data['wake_hour'] ?? 7, minute: data['wake_minute'] ?? 0);
+        quotes = List<String>.from(data['quotes'] ?? []);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load quotes: $e')));
+      }
+    }
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -208,7 +338,11 @@ class _PartnerTabState extends State<PartnerTab> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
             ElevatedButton(
               onPressed: () {
-                _triggerAction('save_quotes', {'time': "${wakeTime.hour}:${wakeTime.minute}", 'quotes': quotes});
+                _triggerAction('save_quotes', {
+                  'wake_hour': wakeTime.hour,
+                  'wake_minute': wakeTime.minute,
+                  'quotes': quotes,
+                });
                 Navigator.pop(context);
               },
               child: const Text("Save"),
@@ -221,12 +355,17 @@ class _PartnerTabState extends State<PartnerTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (!_hasPartner) {
-      return Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      return RefreshIndicator(
+        onRefresh: _checkPartnerStatus,
+        child: ListView(
+          padding: const EdgeInsets.all(24.0),
           children: [
+            const SizedBox(height: 48),
             const Icon(Icons.favorite_border, size: 64, color: Colors.grey),
             const SizedBox(height: 24),
             TextField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Partner Username', border: OutlineInputBorder())),
@@ -237,28 +376,43 @@ class _PartnerTabState extends State<PartnerTab> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        ListTile(leading: const Icon(Icons.message), title: const Text("Send Message"), trailing: const Icon(Icons.chevron_right), onTap: _showMessageDialog),
-        ListTile(leading: const Icon(Icons.draw), title: const Text("Draw Doodle"), trailing: const Icon(Icons.chevron_right), onTap: _showDoodleDialog),
-        ListTile(leading: const Icon(Icons.schedule), title: const Text("Set Return Time"), trailing: const Icon(Icons.chevron_right), onTap: _showReturnTimeDialog),
-        ListTile(leading: const Icon(Icons.public), title: const Text("Timezone Settings"), trailing: const Icon(Icons.chevron_right), onTap: _showTimezoneDialog),
-        ListTile(leading: const Icon(Icons.mood), title: const Text("Log Mood & Sleep"), trailing: const Icon(Icons.chevron_right), onTap: _showMoodSleepDialog),
-        ListTile(leading: const Icon(Icons.wb_sunny), title: const Text("Morning Quotes List"), trailing: const Icon(Icons.chevron_right), onTap: _showQuotesDialog),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.flash_on, color: Colors.red),
-          title: const Text("Send 'Miss You'", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          onTap: () => _triggerAction('miss_you'),
-        ),
-      ],
+    return RefreshIndicator(
+      onRefresh: _checkPartnerStatus,
+      child: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.favorite, color: Colors.pink),
+              title: Text(_partnerUsername ?? 'Partner'),
+              subtitle: Text(_partnerIsSleeping
+                  ? 'Sleeping'
+                  : (_partnerMood != null ? 'Feeling $_partnerMood' : 'No status yet')),
+            ),
+          ),
+          const SizedBox(height: 8),
+          ListTile(leading: const Icon(Icons.message), title: const Text("Send Message"), trailing: const Icon(Icons.chevron_right), onTap: _showMessageDialog),
+          ListTile(leading: const Icon(Icons.draw), title: const Text("Draw Doodle"), trailing: const Icon(Icons.chevron_right), onTap: _showDoodleDialog),
+          ListTile(leading: const Icon(Icons.schedule), title: const Text("Set Return Time"), trailing: const Icon(Icons.chevron_right), onTap: _showReturnTimeDialog),
+          ListTile(leading: const Icon(Icons.public), title: const Text("Timezone Settings"), trailing: const Icon(Icons.chevron_right), onTap: _showTimezoneDialog),
+          ListTile(leading: const Icon(Icons.mood), title: const Text("Log Mood & Sleep"), trailing: const Icon(Icons.chevron_right), onTap: _showMoodSleepDialog),
+          ListTile(leading: const Icon(Icons.wb_sunny), title: const Text("Morning Quotes List"), trailing: const Icon(Icons.chevron_right), onTap: _showQuotesDialog),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.flash_on, color: Colors.red),
+            title: const Text("Send 'Miss You'", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            onTap: () => _triggerAction('miss_you'),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class DoodleCanvas extends StatefulWidget {
-  const DoodleCanvas({super.key});
+  final String token;
+  const DoodleCanvas({super.key, required this.token});
+
   @override
   State<DoodleCanvas> createState() => _DoodleCanvasState();
 }
@@ -268,6 +422,7 @@ class _DoodleCanvasState extends State<DoodleCanvas> {
   final int _gridSize = 80;
   late List<List<bool>> _pixels;
   Point<int>? _lastPoint;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -313,7 +468,7 @@ class _DoodleCanvasState extends State<DoodleCanvas> {
     }
   }
 
-  void _sendDoodle() {
+  Future<void> _sendDoodle() async {
     String hex = "";
     for (int y = 0; y < _gridSize; y++) {
       for (int x = 0; x < _gridSize; x += 8) {
@@ -322,9 +477,27 @@ class _DoodleCanvasState extends State<DoodleCanvas> {
         hex += byte.toRadixString(16).padLeft(2, '0');
       }
     }
-    //POST: http.post('$backendUrl/api/feed/?content_type=doodle&payload=$hex')
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Doodle sent!')));
-    Navigator.pop(context);
+
+    setState(() => _isSending = true);
+    try {
+      final response = await http.post(
+        Uri.parse('$backendUrl/api/feed/?content_type=doodle&payload=$hex'),
+        headers: {'Authorization': 'Bearer ${widget.token}'},
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Doodle sent!')));
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to send doodle (${response.statusCode}).')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   @override
@@ -346,8 +519,11 @@ class _DoodleCanvasState extends State<DoodleCanvas> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            TextButton(onPressed: _clearDoodle, child: const Text("Clear")),
-            ElevatedButton(onPressed: _sendDoodle, child: const Text("Send")),
+            TextButton(onPressed: _isSending ? null : _clearDoodle, child: const Text("Clear")),
+            ElevatedButton(
+              onPressed: _isSending ? null : _sendDoodle,
+              child: _isSending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Text("Send"),
+            ),
           ],
         )
       ],
