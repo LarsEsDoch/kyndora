@@ -85,6 +85,56 @@ def send_partner_request(
     }
 
 
+@router.get("/requests/pending")
+def get_pending_requests(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    statement = (
+        select(PartnerRequest)
+        .where(
+            PartnerRequest.receiver_id == current_user.id,
+            PartnerRequest.status == "pending",
+        )
+        .order_by(PartnerRequest.created_at.desc())
+    )
+
+    requests = session.exec(statement).all()
+
+    result = []
+    for req in requests:
+        sender = session.get(User, req.sender_id)
+        result.append(
+            {
+                "id": req.id,
+                "sender_username": sender.username if sender else "Unknown",
+                "created_at": req.created_at,
+            }
+        )
+
+    return result
+
+
+@router.post("/decline/{request_id}")
+def decline_partner_request(
+    request_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    req = session.get(PartnerRequest, request_id)
+    if not req or req.receiver_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    if req.status != "pending":
+        raise HTTPException(status_code=400, detail="Request is no longer pending")
+
+    req.status = "declined"
+    session.add(req)
+    session.commit()
+
+    return {"status": "success", "message": "Request declined."}
+
+
 @router.post("/accept/{request_id}")
 def accept_partner_request(
     request_id: int,
