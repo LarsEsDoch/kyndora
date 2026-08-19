@@ -1,10 +1,13 @@
 import 'package:kyndora/screens/auth_screen.dart';
 import 'package:kyndora/services/location_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  initLocationBackgroundTask();
+  if (!kIsWeb) {
+    initLocationBackgroundTask();
+  }
   sendCurrentLocation();
   runApp(const KyndoraApp());
 }
