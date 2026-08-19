@@ -171,6 +171,16 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
             delay(3000);
             ESP.restart();
         }
+        else if (message == "factory_reset") {
+            Serial.println("Received command: Resetting Kyndora settings and restarting in 3 seconds...");
+            Preferences prefs;
+            prefs.begin("kyndora", false);
+            prefs.clear();
+            prefs.end();
+
+            delay(3000);
+            ESP.restart();
+        }
         else {
             Serial.println("Unknown command.");
         }
