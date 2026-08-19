@@ -23,7 +23,6 @@ class _FeedTabState extends State<FeedTab> {
 
   Future<void> _fetchFeed() async {
     try {
-      //FETCH: http.get('$backendUrl/api/feed')
       final response = await http.get(
         Uri.parse('$backendUrl/api/feed'),
         headers: {'Authorization': 'Bearer ${widget.token}'},

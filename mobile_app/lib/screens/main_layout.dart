@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../tabs/devices_tab.dart';
 import '../tabs/feed_tab.dart';
 import '../tabs/partner_tab.dart';
+import '../widgets/partner_request_dialog.dart';
 import 'auth_screen.dart';
 
 class MainLayout extends StatefulWidget {
@@ -14,7 +15,7 @@ class MainLayout extends StatefulWidget {
   State<MainLayout> createState() => _MainLayoutState();
 }
 
-class _MainLayoutState extends State<MainLayout> {
+class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   late final List<Widget> _tabs;
@@ -22,11 +23,30 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _tabs = [
       FeedTab(token: widget.token),
       DevicesTab(token: widget.token),
       PartnerTab(token: widget.token),
     ];
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      checkAndShowPendingPartnerRequests(context, widget.token);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      checkAndShowPendingPartnerRequests(context, widget.token);
+    }
   }
 
   void _logout() async {
