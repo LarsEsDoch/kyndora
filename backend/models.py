@@ -30,7 +30,7 @@ class User(SQLModel, table=True):
 class Device(SQLModel, table=True):
     __tablename__ = "devices"
     mac_address: str = Field(primary_key=True)
-    name: str = Field(default=mac_address)
+    name: str = Field(default="")
     user_id: UUID = Field(foreign_key="users.id")
     uptime_s: int | None = None
     firmware_version: str | None = None

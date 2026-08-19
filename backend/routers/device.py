@@ -158,9 +158,9 @@ def update_device_settings(
 @router.post("/ticket", status_code=201)
 def generate_provisioning_ticket(
     session: Session = Depends(get_session),
-    current_user_id: str = Depends(get_current_user_id),
+    current_user_id: UUID = Depends(get_current_user_id),
 ):
-    new_ticket = ProvisioningTicket(user_id=UUID(current_user_id))
+    new_ticket = ProvisioningTicket(user_id=current_user_id)
     session.add(new_ticket)
     session.commit()
     session.refresh(new_ticket)
