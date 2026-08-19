@@ -1,1 +1,1 @@
-const String backendUrl = "http://192.168.178.100:8000";
+const String backendUrl = "https://api.bogatzhome.com";
