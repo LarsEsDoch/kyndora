@@ -45,6 +45,21 @@ def _get_or_create_settings(session: Session, mac_address: str) -> DeviceSetting
     return settings
 
 
+def _delete_device_data(session: Session, device: Device):
+    settings = session.get(DeviceSettings, device.mac_address)
+    if settings:
+        session.delete(settings)
+
+    telemetry_entries = session.exec(
+        select(Telemetry).where(Telemetry.device_mac == device.mac_address)
+    ).all()
+    for telemetry in telemetry_entries:
+        session.delete(telemetry)
+
+    session.delete(device)
+    session.commit()
+    
+
 @router.get("")
 def list_user_devices(
     session: Session = Depends(get_session), current_user=Depends(get_current_user_id)
@@ -228,7 +243,7 @@ def send_device_command(
     session: Session = Depends(get_session),
     current_user_id: str = Depends(get_current_user_id),
 ):
-    _require_owned_device(mac_address, session, current_user_id)
+    device = _require_owned_device(mac_address, session, current_user_id)
 
     topic = f"kyndora/{mac_address.replace(':', '')}/commands"
 
@@ -244,6 +259,9 @@ def send_device_command(
         raise HTTPException(
             status_code=500, detail=f"Failed to send MQTT command: {e!s}"
         )
+
+    if command == "factory_reset":
+        _delete_device_data(session, device)
 
     return {
         "status": "success",
