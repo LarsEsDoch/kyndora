@@ -5,6 +5,7 @@
 #include "update.hpp"
 #include "provisioning.hpp"
 #include "mqtt_manager.h"
+#include "light_manager.hpp"
 #include "display_manager.h"
 #include <ArduinoJson.h>
 
@@ -23,6 +24,7 @@ constexpr uint32_t intervalMinute = 60000;
 const String currentVersion = "v0.0.0";
 
 UpdateManager updater(currentVersion, 3);
+LightManager lightManager;
 DisplayManager displayManager(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY);
 MqttManager mqttManager;
 
@@ -53,6 +55,7 @@ void setup() {
 
     SPI.begin(PIN_EPD_SCK, -1, PIN_EPD_MOSI, PIN_EPD_CS);
     displayManager.begin();
+    lightManager.begin();
 
     ProvisioningManager::begin();
 
@@ -105,6 +108,7 @@ void loop() {
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
 
         mqttManager.handle();
+        lightManager.handle();
 
         if (now - lastTimeMinutes >= intervalMinute) {
             lastTimeMinutes = now;
