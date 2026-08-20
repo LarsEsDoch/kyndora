@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/realtime_service.dart';
 
 class PartnerTab extends StatefulWidget {
   final String token;
@@ -20,6 +22,7 @@ class _PartnerTabState extends State<PartnerTab> {
   bool _partnerIsSleeping = false;
   String? _partnerReturnTime;
   final _usernameController = TextEditingController();
+  StreamSubscription<Map<String, dynamic>>? _eventSubscription;
 
   Map<String, String> get _authHeaders => {
     'Authorization': 'Bearer ${widget.token}',
@@ -30,6 +33,21 @@ class _PartnerTabState extends State<PartnerTab> {
   void initState() {
     super.initState();
     _checkPartnerStatus();
+    _eventSubscription = RealtimeService.instance.events.listen((event) {
+      if (!mounted) return;
+      final type = event['type'];
+      if (type == 'partner_status_changed' ||
+          type == 'partner_accepted' ||
+          type == 'partner_declined') {
+        _checkPartnerStatus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkPartnerStatus() async {

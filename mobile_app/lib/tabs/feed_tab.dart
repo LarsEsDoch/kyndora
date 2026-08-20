@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import '../services/realtime_service.dart';
 
 class FeedTab extends StatefulWidget {
   final String token;
@@ -14,11 +16,23 @@ class FeedTab extends StatefulWidget {
 class _FeedTabState extends State<FeedTab> {
   List<dynamic> _feedItems = [];
   bool _isLoading = true;
+  StreamSubscription<Map<String, dynamic>>? _eventSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchFeed();
+    _eventSubscription = RealtimeService.instance.events.listen((event) {
+      if (event['type'] == 'feed_updated' && mounted) {
+        _fetchFeed();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _eventSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchFeed() async {

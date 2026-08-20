@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/realtime_service.dart';
 import '../tabs/devices_tab.dart';
 import '../tabs/feed_tab.dart';
 import '../tabs/partner_tab.dart';
@@ -19,6 +21,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   late final List<Widget> _tabs;
+  StreamSubscription<Map<String, dynamic>>? _eventSubscription;
 
   @override
   void initState() {
@@ -31,6 +34,9 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
       PartnerTab(token: widget.token),
     ];
 
+    RealtimeService.instance.connect(widget.token);
+    _eventSubscription = RealtimeService.instance.events.listen(_handleEvent);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowPendingPartnerRequests(context, widget.token);
     });
@@ -39,17 +45,27 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _eventSubscription?.cancel();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      RealtimeService.instance.connect(widget.token);
+      checkAndShowPendingPartnerRequests(context, widget.token);
+    }
+  }
+
+  void _handleEvent(Map<String, dynamic> event) {
+    if (!mounted) return;
+    if (event['type'] == 'partner_request') {
       checkAndShowPendingPartnerRequests(context, widget.token);
     }
   }
 
   void _logout() async {
+    RealtimeService.instance.disconnect();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_jwt');
     if (mounted) {
