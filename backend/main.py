@@ -30,6 +30,7 @@ origins = [
     "http://localhost:8080",
     "http://localhost:51117",
     "https://api.bogatzhome.com",
+    "https://larsesdoch.github.io",
 ]
 
 app.add_middleware(

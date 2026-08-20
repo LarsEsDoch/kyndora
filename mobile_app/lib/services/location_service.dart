@@ -64,7 +64,7 @@ Future<void> initLocationBackgroundTask() async {
   await Workmanager().registerPeriodicTask(
     locationTaskKey,
     locationTaskKey,
-    frequency: const Duration(minutes: 15),
+    frequency: const Duration(minutes: 1),
     constraints: Constraints(networkType: NetworkType.connected),
   );
 }
