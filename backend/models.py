@@ -121,3 +121,12 @@ class Telemetry(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class PushToken(SQLModel, table=True):
+    __tablename__ = "push_tokens"
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: UUID = Field(foreign_key="users.id", index=True)
+    platform: str
+    token: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

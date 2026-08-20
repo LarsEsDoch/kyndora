@@ -6,7 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from database import create_db_and_tables
 from mqtt_client import connect_mqtt
-from routers import auth, device, doodles, feed, mqtt, partners, users, ws
+from routers import auth, device, doodles, feed, mqtt, partners, push, users, ws
 from services.mqtt_worker import init_mqtt_worker
 from services.weather_worker import init_weather_worker
 
@@ -53,6 +53,7 @@ app.include_router(partners.router)
 app.include_router(feed.router)
 app.include_router(users.router)
 app.include_router(ws.router)
+app.include_router(push.router)
 
 
 @app.get("/")

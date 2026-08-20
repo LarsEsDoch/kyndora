@@ -13,3 +13,5 @@ timezonefinder
 pytest
 httpx
 starlette
+firebase-admin
+pywebpush

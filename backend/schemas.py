@@ -66,3 +66,12 @@ class MorningQuotesUpdate(BaseModel):
 class TimezoneUpdate(BaseModel):
     auto_detect: bool
     iana_timezone: str | None = None
+
+
+class FcmTokenRegister(BaseModel):
+    token: str
+
+
+class WebPushSubscriptionRegister(BaseModel):
+    endpoint: str
+    keys: dict
