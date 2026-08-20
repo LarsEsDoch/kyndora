@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from paho.mqtt import publish
 from sqlmodel import Session, select
 
@@ -11,6 +11,7 @@ from models import Device, MorningQuoteSettings, PartnerRequest, User
 from schemas import MoodUpdate, MorningQuotesUpdate, ReturnTimeUpdate, TimezoneUpdate
 from security import get_current_user
 from services.timezone_service import resolve_and_push_partner_timezone
+from ws_manager import notify_user
 
 router = APIRouter(prefix="/api/partners", tags=["partners"])
 
@@ -50,6 +51,7 @@ def _push_to_partner_device(
 @router.post("/request")
 def send_partner_request(
     target_username: str,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -78,6 +80,20 @@ def send_partner_request(
     req = PartnerRequest(sender_id=current_user.id, receiver_id=target_user.id)
     session.add(req)
     session.commit()
+    session.refresh(req)
+
+    notify_user(
+        str(target_user.id),
+        {
+            "type": "partner_request",
+            "data": {
+                "id": req.id,
+                "sender_username": current_user.username,
+                "created_at": req.created_at.isoformat(),
+            },
+        },
+        request.app.state.loop,
+    )
 
     return {
         "status": "success",
@@ -138,6 +154,7 @@ def decline_partner_request(
 @router.post("/accept/{request_id}")
 def accept_partner_request(
     request_id: int,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -161,6 +178,15 @@ def accept_partner_request(
     session.add(sender)
     session.add(req)
     session.commit()
+
+    notify_user(
+        str(sender.id),
+        {
+            "type": "partner_accepted",
+            "data": {"username": current_user.username},
+        },
+        request.app.state.loop,
+    )
 
     return {
         "status": "success",
@@ -193,6 +219,7 @@ def get_partner_status(
 @router.post("/mood")
 def update_mood(
     data: MoodUpdate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -206,11 +233,15 @@ def update_mood(
         session,
         current_user,
         "set_mood",
-        {
-            "mood": data.mood,
-            "is_sleeping": data.is_sleeping,
-        },
+        {"mood": data.mood, "is_sleeping": data.is_sleeping},
     )
+
+    if current_user.partner_id:
+        notify_user(
+            str(current_user.partner_id),
+            {"type": "partner_status_changed"},
+            request.app.state.loop,
+        )
 
     return {"status": "success", "message": "Mood updated."}
 
@@ -218,6 +249,7 @@ def update_mood(
 @router.post("/return-time")
 def set_return_time(
     data: ReturnTimeUpdate,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -229,10 +261,15 @@ def set_return_time(
         session,
         current_user,
         "set_return_time",
-        {
-            "timestamp": data.timestamp.isoformat(),
-        },
+        {"timestamp": data.timestamp.isoformat()},
     )
+
+    if current_user.partner_id:
+        notify_user(
+            str(current_user.partner_id),
+            {"type": "partner_status_changed"},
+            request.app.state.loop,
+        )
 
     return {"status": "success", "message": "Return time updated."}
 

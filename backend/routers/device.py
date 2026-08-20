@@ -58,7 +58,7 @@ def _delete_device_data(session: Session, device: Device):
 
     session.delete(device)
     session.commit()
-    
+
 
 @router.get("")
 def list_user_devices(

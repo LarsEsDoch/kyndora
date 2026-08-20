@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -14,6 +15,9 @@ from services.weather_worker import init_weather_worker
 async def lifespan(app: FastAPI):
     print("Starting Backend.")
     create_db_and_tables()
+
+    app.state.loop = asyncio.get_running_loop()
+
     print("Starting MQTT Client.")
     connect_mqtt()
     print("Starting MQTT Worker.")

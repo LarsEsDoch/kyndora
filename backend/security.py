@@ -72,3 +72,16 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User nicht gefunden"
         )
     return user
+
+
+def decode_token_to_user_id(token: str) -> UUID:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
+            raise ValueError("Token has no subject")
+        return UUID(user_id_str)
+    except jwt.PyJWTError:
+        raise ValueError("Invalid token")
+    except (ValueError, TypeError):
+        raise ValueError("Invalid token")

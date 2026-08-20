@@ -1,13 +1,14 @@
 import json
 import os
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from paho.mqtt import publish
 from sqlmodel import Session, or_, select
 
 from database import get_session
 from models import ContentFeed, Device, User
 from security import get_current_user
+from ws_manager import notify_user
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
 
@@ -62,6 +63,7 @@ def get_current_feed(
 def send_content(
     content_type: str,
     payload: str,
+    request: Request,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
@@ -97,6 +99,12 @@ def send_content(
             print(f"MQTT Ping gesendet an {topic}")
         except Exception as e:
             print(f"Fehler beim MQTT Ping: {e}")
+
+    notify_user(
+        str(current_user.partner_id),
+        {"type": "feed_updated"},
+        request.app.state.loop,
+    )
 
     return {"status": "success", "message": "Content saved and partner notified."}
 
