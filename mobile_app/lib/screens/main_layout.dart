@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/push_service.dart' as push;
 import '../services/realtime_service.dart';
 import '../tabs/devices_tab.dart';
 import '../tabs/feed_tab.dart';
@@ -36,6 +38,10 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
 
     RealtimeService.instance.connect(widget.token);
     _eventSubscription = RealtimeService.instance.events.listen(_handleEvent);
+
+    if (!kIsWeb) {
+      push.initPushNotifications(widget.token);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowPendingPartnerRequests(context, widget.token);
@@ -78,7 +84,15 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kyndora'),
-        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: _logout)],
+        actions: [
+          if (kIsWeb)
+            IconButton(
+              icon: const Icon(Icons.notifications_active_outlined),
+              tooltip: 'Activate Notifications',
+              onPressed: () => push.initPushNotifications(widget.token),
+            ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _logout),
+        ],
       ),
       body: _tabs[_currentIndex],
       bottomNavigationBar: NavigationBar(
@@ -86,7 +100,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dynamic_feed), label: 'Feed'),
-          NavigationDestination(icon: Icon(Icons.devices), label: 'Geräte'),
+          NavigationDestination(icon: Icon(Icons.devices), label: 'Devices'),
           NavigationDestination(icon: Icon(Icons.favorite), label: 'Partner'),
         ],
       ),
