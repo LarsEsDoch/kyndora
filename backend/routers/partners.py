@@ -10,6 +10,7 @@ from database import get_session
 from models import Device, MorningQuoteSettings, PartnerRequest, User
 from schemas import MoodUpdate, MorningQuotesUpdate, ReturnTimeUpdate, TimezoneUpdate
 from security import get_current_user
+from services.push_service import send_push_to_user
 from services.timezone_service import resolve_and_push_partner_timezone
 from ws_manager import notify_user
 
@@ -94,6 +95,17 @@ def send_partner_request(
         },
         request.app.state.loop,
     )
+
+    try:
+        send_push_to_user(
+            session,
+            target_user.id,
+            title="New Partner Request",
+            body=f"{current_user.username} wants to connect with you on Kyndora",
+            data={"type": "partner_request"},
+        )
+    except Exception as e:
+        print(f"Push notification failed: {e}")
 
     return {
         "status": "success",
@@ -351,5 +363,16 @@ def send_miss_you(
         raise HTTPException(status_code=400, detail="No partner assigned")
 
     _push_to_partner_device(session, current_user, "miss_you", {})
+
+    try:
+        send_push_to_user(
+            session,
+            current_user.partner_id,
+            title=current_user.username,
+            body="is thinking of you 💌",
+            data={"type": "miss_you"},
+        )
+    except Exception as e:
+        print(f"Push notification failed: {e}")
 
     return {"status": "success", "message": "Miss you sent."}

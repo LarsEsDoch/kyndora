@@ -8,6 +8,7 @@ from sqlmodel import Session, or_, select
 from database import get_session
 from models import ContentFeed, Device, User
 from security import get_current_user
+from services.push_service import send_push_to_user
 from ws_manager import notify_user
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
@@ -105,6 +106,18 @@ def send_content(
         {"type": "feed_updated"},
         request.app.state.loop,
     )
+
+    try:
+        body = "sent you a doodle" if content_type == "doodle" else "sent you a message"
+        send_push_to_user(
+            session,
+            current_user.partner_id,
+            title=current_user.username,
+            body=body,
+            data={"type": "feed_updated"},
+        )
+    except Exception as e:
+        print(f"Push notification failed: {e}")
 
     return {"status": "success", "message": "Content saved and partner notified."}
 
