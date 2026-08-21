@@ -1,0 +1,1 @@
+Future<void> initWebPush(String authToken) async {}
