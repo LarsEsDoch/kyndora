@@ -1,2 +1,4 @@
 __pycache__/
 firebase-service-account.json
+private_key.pem
+public_key.pem
