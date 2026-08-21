@@ -97140,7 +97140,7 @@ if(s.b==null)s.b=new A.cU(null,null,t.gW)
 s.UZ()},
 UZ(){var s,r,q=this,p=q.c
 if(p==null)return
-try{s=A.cj("ws://api.bogatzhome.com/ws/events?token="+p)
+try{s=A.cj("wss://api.bogatzhome.com/ws/events?token="+p)
 p=A.aU1(A.aFn(s,null))
 q.a=p
 q.e=0
