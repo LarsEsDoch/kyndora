@@ -11,6 +11,7 @@ void LightManager::begin() {
     }
 
     FastLED.addLeds<WS2812B, DATA_PIN, GRB>(leds, NUM_LEDS);
+    FastLED.setMaxPowerInVoltsAndMilliamps(5, 1000);
     FastLED.setBrightness(0);
     FastLED.show();
 }
@@ -21,14 +22,16 @@ void LightManager::handle() {
         lastCheck = now;
 
         float lux = lightMeter.readLightLevel();
-        Serial.println(lux);
 
-        int brightness = map((long)lux, 50, 10, 255, 5);
-
+        int brightness = map((long)lux, 50, 5, 255, 5);
         brightness = constrain(brightness, 0, 255);
-
         FastLED.setBrightness(brightness);
-        fill_solid(leds, NUM_LEDS, CRGB::White);
+
+        static uint8_t startHue = 0;
+        startHue += 1;
+
+        fill_rainbow(leds, NUM_LEDS, startHue, 7);
+
         FastLED.show();
     }
 }
