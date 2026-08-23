@@ -166,6 +166,23 @@ void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length
             _hasNewWeather = true;
             Serial.println("Weather data received.");
         }
+        else if (!error && doc["command"] == "rainbow") {
+            _pendingLightCommand = "rainbow";
+            Serial.println("Received command: Rainbow mode");
+        }
+        else if (!error && doc["command"] == "warm_white") {
+            _pendingLightCommand = "warm_white";
+            Serial.println("Received command: Warm white mode");
+        }
+        else if (!error && doc["command"] == "miss_you") {
+            _pendingLightCommand = "miss_you";
+            Serial.println("Received command: Miss you animation");
+        }
+        else if (message == "restart") {
+            Serial.println("Received command: Restart in 3 seconds...");
+            delay(3000);
+            ESP.restart();
+        }
         else if (message == "restart") {
             Serial.println("Received command: Restart in 3 seconds...");
             delay(3000);

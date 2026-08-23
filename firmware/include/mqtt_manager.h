@@ -20,6 +20,14 @@ public:
     bool getWeatherWindy() const { return _weatherWindy; }
 
     bool hasApiError() const { return _apiError; }
+
+    bool hasPendingLightCommand() const { return _pendingLightCommand.length() > 0; }
+    String consumePendingLightCommand() {
+        String command = _pendingLightCommand;
+        _pendingLightCommand = "";
+        return command;
+    }
+
 private:
     void connect();
     void publishHeartbeat();
@@ -39,6 +47,8 @@ private:
     bool _weatherWindy = false;
 
     bool _apiError = false;
+
+    String _pendingLightCommand = "";
 
     unsigned long _lastReconnectAttempt = 0;
     unsigned long _lastHeartbeat = 0;

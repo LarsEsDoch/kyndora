@@ -108,6 +108,21 @@ void loop() {
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
 
         mqttManager.handle();
+
+        if (mqttManager.hasPendingLightCommand()) {
+            String lightCommand = mqttManager.consumePendingLightCommand();
+
+            if (lightCommand == "rainbow") {
+                lightManager.setRainbowMode();
+            } else if (lightCommand == "warm_white") {
+                lightManager.setWarmWhiteMode();
+            } else if (lightCommand == "miss_you") {
+                lightManager.playMissYouAnimation();
+            }
+        }
+
+        lightManager.handle();
+
         lightManager.handle();
 
         if (now - lastTimeMinutes >= intervalMinute) {
