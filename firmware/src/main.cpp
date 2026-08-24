@@ -12,7 +12,7 @@
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
 #define PIN_EPD_RST   13
-#define PIN_EPD_BUSY  14
+#define PIN_EPD_BUSY  46
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
