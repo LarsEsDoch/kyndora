@@ -1,65 +1,89 @@
 import 'dart:convert';
 import 'dart:html' as html;
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../constants.dart';
+import 'dart:typed_data';
 
 Future<void> initWebPush(String authToken) async {
-  if (!html.Notification.supported) return;
+  if (!html.Notification.supported) {
+    print('[Push] Notifications not supported in this browser.');
+    return;
+  }
 
   final permission = await html.Notification.requestPermission();
+  print('[Push] Permission result: $permission');
   if (permission != 'granted') return;
 
-  final registration = await html.window.navigator.serviceWorker?.register('push-sw.js');
-  if (registration == null) return;
+  if (html.window.navigator.serviceWorker == null) {
+    print('[Push] serviceWorker API not available (not a secure context?).');
+    return;
+  }
+
+  html.ServiceWorkerRegistration registration;
+  try {
+    registration = await html.window.navigator.serviceWorker!.register('push-sw.js');
+    print('[Push] Service worker registered: ${registration.scope}');
+  } catch (e) {
+    print('[Push] Service worker registration FAILED: $e');
+    return;
+  }
+
+  await html.window.navigator.serviceWorker!.ready;
 
   final existing = await registration.pushManager?.getSubscription();
   if (existing != null) {
+    print('[Push] Existing subscription found, re-sending to backend.');
     await _sendSubscription(authToken, existing);
     return;
   }
 
   final keyResponse = await http.get(Uri.parse('$backendUrl/api/push/vapid-public-key'));
   final publicKey = jsonDecode(keyResponse.body)['public_key'] as String?;
+  print('[Push] VAPID public key fetched: $publicKey');
   if (publicKey == null) return;
 
-  final subscription = await registration.pushManager?.subscribe({
-    'userVisibleOnly': true,
-    'applicationServerKey': _urlBase64ToUint8List(publicKey),
-  });
+  try {
+    final subscription = await registration.pushManager?.subscribe({
+      'userVisibleOnly': true,
+      'applicationServerKey': _urlBase64ToUint8List(publicKey),
+    });
 
-  if (subscription != null) {
-    await _sendSubscription(authToken, subscription);
+    if (subscription != null) {
+      print('[Push] Subscribed: ${subscription.endpoint}');
+      await _sendSubscription(authToken, subscription);
+    }
+  } catch (e) {
+    print('[Push] pushManager.subscribe FAILED: $e');
   }
 }
 
 Future<void> _sendSubscription(String authToken, html.PushSubscription sub) async {
-  final endpoint = sub.endpoint;
-  if (endpoint == null) return;
+  String bufferToBase64Url(ByteBuffer? buffer) {
+    if (buffer == null) return '';
+    final uint8List = buffer.asUint8List();
+    return base64UrlEncode(uint8List).replaceAll('=', '');
+  }
 
   final p256dhBuffer = sub.getKey('p256dh');
   final authBuffer = sub.getKey('auth');
-  if (p256dhBuffer == null || authBuffer == null) return;
 
-  final p256dh = _base64UrlEncode(p256dhBuffer);
-  final authKey = _base64UrlEncode(authBuffer);
+  final subJson = {
+    'endpoint': sub.endpoint,
+    'keys': {
+      'p256dh': bufferToBase64Url(p256dhBuffer),
+      'auth': bufferToBase64Url(authBuffer),
+    }
+  };
 
-  await http.post(
+  final response = await http.post(
     Uri.parse('$backendUrl/api/push/register/webpush'),
     headers: {
       'Authorization': 'Bearer $authToken',
       'Content-Type': 'application/json',
     },
-    body: jsonEncode({
-      'endpoint': endpoint,
-      'keys': {'p256dh': p256dh, 'auth': authKey},
-    }),
+    body: jsonEncode(subJson),
   );
-}
-
-String _base64UrlEncode(ByteBuffer buffer) {
-  final bytes = buffer.asUint8List();
-  return base64Url.encode(bytes).replaceAll('=', '');
+  print('[Push] Backend registration response: ${response.statusCode} ${response.body}');
 }
 
 List<int> _urlBase64ToUint8List(String base64String) {
