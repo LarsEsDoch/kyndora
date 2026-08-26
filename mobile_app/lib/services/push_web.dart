@@ -45,7 +45,7 @@ Future<void> initWebPush(String authToken) async {
   try {
     final subscription = await registration.pushManager?.subscribe({
       'userVisibleOnly': true,
-      'applicationServerKey': _urlBase64ToUint8List(publicKey),
+      'applicationServerKey': publicKey,
     });
 
     if (subscription != null) {
@@ -84,10 +84,4 @@ Future<void> _sendSubscription(String authToken, html.PushSubscription sub) asyn
     body: jsonEncode(subJson),
   );
   print('[Push] Backend registration response: ${response.statusCode} ${response.body}');
-}
-
-List<int> _urlBase64ToUint8List(String base64String) {
-  final padding = '=' * ((4 - base64String.length % 4) % 4);
-  final base64 = (base64String + padding).replaceAll('-', '+').replaceAll('_', '/');
-  return base64Decode(base64);
 }
