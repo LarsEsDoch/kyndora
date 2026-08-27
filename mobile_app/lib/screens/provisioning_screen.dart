@@ -79,7 +79,12 @@ class _ProvisioningScreenState extends State<ProvisioningScreen> {
     setState(() => _statusMessage = "Scanning for Kyndora-Setup...");
 
     try {
-      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+      final Guid targetServiceGuid = Guid(serviceUuid);
+
+      await FlutterBluePlus.startScan(
+        withServices: [targetServiceGuid],
+        timeout: const Duration(seconds: 10),
+      );
       BluetoothDevice? kyndoraDevice;
 
       FlutterBluePlus.scanResults.listen((results) {

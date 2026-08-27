@@ -118,9 +118,14 @@ void ProvisioningManager::startBLEServer() {
     pCharToken->setCallbacks(new MyCallbacks());
 
     pService->start();
+
     BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
     pAdvertising->setScanResponse(true);
+
+    pAdvertising->setMinPreferred(0x06);
+    pAdvertising->setMinPreferred(0x12);
+
     BLEDevice::startAdvertising();
 
     Serial.println("BLE Server started. Waiting for Flutter App...");
