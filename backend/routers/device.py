@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from paho.mqtt import publish
 from pydantic import BaseModel
+from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from database import get_session
@@ -55,6 +56,8 @@ def _delete_device_data(session: Session, device: Device):
     ).all()
     for telemetry in telemetry_entries:
         session.delete(telemetry)
+
+    session.flush()
 
     session.delete(device)
     session.commit()
