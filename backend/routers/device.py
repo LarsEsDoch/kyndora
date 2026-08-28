@@ -6,7 +6,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from paho.mqtt import publish
 from pydantic import BaseModel
-from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from database import get_session
