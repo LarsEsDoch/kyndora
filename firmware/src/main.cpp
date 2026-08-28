@@ -143,7 +143,7 @@ void loop() {
         if (mqttManager.hasNewContent()) {
             mqttManager.clearNewContentFlag();
 
-            String responseJson = mqttManager.fetchLatestMessage("192.168.178.100");
+            String responseJson = mqttManager.fetchLatestMessage("api.bogatzhome.com");
 
             if (responseJson.length() > 0) {
                 JsonDocument doc;
@@ -179,5 +179,5 @@ void loop() {
         }
     }
 
-    delay(100);
+    delay(10);
 }

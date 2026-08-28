@@ -133,7 +133,7 @@ void ProvisioningManager::startBLEServer() {
 
 void ProvisioningManager::stopBLEServer() {
     BLEDevice::deinit(true);
-    Serial.println("BLE stopped to save power and memory.");
+    Serial.println("BLE stopped.");
 }
 
 void ProvisioningManager::handle() {
@@ -157,6 +157,7 @@ void ProvisioningManager::handle() {
             Serial.println("\nWi-Fi connected!");
             exchangeTicketForCredentials();
         } else {
+            stopBLEServer();
             Serial.println("\nFailed to connect to Wi-Fi. Restarting BLE...");
             startBLEServer();
         }
@@ -178,7 +179,7 @@ void ProvisioningManager::connectToWiFi() {
 
 void ProvisioningManager::exchangeTicketForCredentials() {
     HTTPClient http;
-    String apiUrl = "http://192.168.178.100:8000/api/device/register";
+    String apiUrl = "https://api.bogatzhome.com/api/device/register";
 
     if (http.begin(apiUrl)) {
         http.addHeader("Content-Type", "application/json");

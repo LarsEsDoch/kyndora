@@ -218,7 +218,7 @@ String MqttManager::fetchLatestMessage(const char* backendIp) {
     if (WiFi.status() != WL_CONNECTED) return "";
 
     HTTPClient http;
-    String url = "http://" + String(backendIp) + ":8000/api/feed/device/" + _deviceId + "/latest";
+    String url = "https://" + String(backendIp) + "/api/feed/device/" + _deviceId + "/latest";
 
     http.begin(url);
     int httpCode = http.GET();
