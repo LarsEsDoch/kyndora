@@ -6,7 +6,8 @@
 #include <ctime>
 #include "update.hpp"
 
-UpdateManager::UpdateManager(const String& buildVersion, const String& channelIn, const int& checkUpdateHour) {
+UpdateManager::UpdateManager(const String& buildVersion, const String& channelIn, const int& checkUpdateHour, DisplayManager& display)
+    : _displayManager(display) {
     channel = channelIn;
     updateHour = checkUpdateHour;
     initialBuildVersion = buildVersion;
@@ -136,11 +137,9 @@ void UpdateManager::checkForUpdates() {
 
     if (remoteVersion != localVersion) {
         Serial.println("New version found! Downloading...");
+        _displayManager.showUpdateScreen();
         downloadUrl = firmwareUrl;
         executeOTA(remoteVersion);
-        if (!updateError) {
-            saveAppliedVersion(remoteVersion);
-        }
     } else {
         Serial.println("The firmware is up to date.");
     }

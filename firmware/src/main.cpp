@@ -34,9 +34,9 @@ const String otaChannel = "beta";
 #endif
 const String currentVersion = String(FW_VERSION_STR).length() > 0 ? String(FW_VERSION_STR) : "dev-local";
 
-UpdateManager updater(currentVersion, otaChannel, 3);
-LightManager lightManager;
 DisplayManager displayManager(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY);
+UpdateManager updater(currentVersion, otaChannel, 3, displayManager);
+LightManager lightManager;
 MqttManager mqttManager;
 
 int lastMinute = -1;

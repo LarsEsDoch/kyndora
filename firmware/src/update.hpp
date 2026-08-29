@@ -1,10 +1,10 @@
 #pragma once
-#include <Arduino.h>
 #include <Preferences.h>
+#include "display_manager.h"
 
 class UpdateManager {
 public:
-    explicit UpdateManager(const String& buildVersion, const String& channel, const int& checkUpdateHour);
+    explicit UpdateManager(const String& buildVersion, const String& channel, const int& checkUpdateHour, DisplayManager& display);
 
     void begin();
     void automaticCheckForUpdates();
@@ -14,6 +14,7 @@ public:
     bool hasUpdateError() const { return updateError; }
 
 private:
+    DisplayManager& _displayManager;
     int updateHour;
     int lastCheckDay = -1;
 

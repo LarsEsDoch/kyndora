@@ -20,6 +20,7 @@ public:
 
     void begin();
     void showSetupScreen();
+    void showUpdateScreen();
 
     void setWifiState(WifiIconState state);
     void setTime(int hour, int minute);
