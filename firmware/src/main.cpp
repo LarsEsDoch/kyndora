@@ -26,9 +26,15 @@ String timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
 uint32_t lastTimeMinutes = 0;
 constexpr uint32_t intervalMinute = 60000;
-const String currentVersion = "v0.0.0";
 
-UpdateManager updater(currentVersion, 3);
+const String otaChannel = "beta";
+
+#ifndef FW_VERSION_STR
+#define FW_VERSION_STR ""
+#endif
+const String currentVersion = String(FW_VERSION_STR).length() > 0 ? String(FW_VERSION_STR) : "dev-local";
+
+UpdateManager updater(currentVersion, otaChannel, 3);
 LightManager lightManager;
 DisplayManager displayManager(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY);
 MqttManager mqttManager;

@@ -2,12 +2,34 @@
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <Update.h>
+#include <ArduinoJson.h>
 #include <ctime>
 #include "update.hpp"
 
-UpdateManager::UpdateManager(const String& version, const int& checkUpdateHour) {
-    currentVersion = version;
+UpdateManager::UpdateManager(const String& buildVersion, const String& channelIn, const int& checkUpdateHour) {
+    channel = channelIn;
     updateHour = checkUpdateHour;
+    appliedVersion = loadAppliedVersion(buildVersion);
+    Serial.println("OTA channel: " + channel + " | Applied version: " + appliedVersion);
+}
+
+String UpdateManager::loadAppliedVersion(const String& buildVersion) {
+    preferences.begin("kyndora", true);
+    String stored = preferences.getString("fw_applied", "");
+    preferences.end();
+
+    if (stored.length() == 0) {
+        saveAppliedVersion(buildVersion);
+        return buildVersion;
+    }
+    return stored;
+}
+
+void UpdateManager::saveAppliedVersion(const String& version) {
+    preferences.begin("kyndora", false);
+    preferences.putString("fw_applied", version);
+    preferences.end();
+    appliedVersion = version;
 }
 
 bool UpdateManager::isWiFiConnected() {
@@ -16,18 +38,23 @@ bool UpdateManager::isWiFiConnected() {
 
 void UpdateManager::automaticCheckForUpdates() {
     tm timeInfo{};
-    if (!getLocalTime(&timeInfo)) {
-        return;
-    }
+    if (!getLocalTime(&timeInfo)) return;
 
     if (timeInfo.tm_hour >= updateHour) {
         if (lastCheckDay != timeInfo.tm_mday) {
             lastCheckDay = timeInfo.tm_mday;
-
             Serial.println("Update time reached.");
             checkForUpdates();
         }
     }
+}
+
+String UpdateManager::buildApiUrl() const {
+    const String base = "https://api.github.com/repos/LarsEsDoch/kyndora/releases";
+    if (channel == "stable") {
+        return base + "/latest";
+    }
+    return base + "/tags/" + channel;
 }
 
 void UpdateManager::checkForUpdates() {
@@ -37,7 +64,7 @@ void UpdateManager::checkForUpdates() {
         return;
     }
 
-    Serial.println("Checking for new updates...");
+    Serial.println("Checking for new updates on channel '" + channel + "'...");
 
     WiFiClientSecure client;
     client.setInsecure();
@@ -45,51 +72,70 @@ void UpdateManager::checkForUpdates() {
     HTTPClient http;
     http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
-    const auto githubApiUrl = "https://api.github.com/repos/LarsEsDoch/kyndora/releases/latest";
+    const String apiUrl = buildApiUrl();
 
-    if (http.begin(client, githubApiUrl)) {
-        http.addHeader("User-Agent", "KYNDORA-OTA-Client");
-
-        const int httpCode = http.GET();
-
-        if (httpCode == HTTP_CODE_OK) {
-            updateError = false;
-            const String payload = http.getString();
-
-            const int tagIndex = payload.indexOf(R"("tag_name":")");
-            if (tagIndex != -1) {
-                const int tagStart = tagIndex + 12;
-                const int tagEnd = payload.indexOf("\"", tagStart);
-                const String latestVersion = payload.substring(tagStart, tagEnd);
-
-                Serial.println("Installed Version: " + currentVersion);
-                Serial.println("Latest GitHub Version: " + latestVersion);
-
-                if (latestVersion != currentVersion) {
-                    Serial.println("New version found! Getting download link...");
-
-                    const int urlIndex = payload.indexOf(R"("browser_download_url":")");
-                    if (urlIndex != -1) {
-                        const int urlStart = urlIndex + 24;
-                        const int urlEnd = payload.indexOf("\"", urlStart);
-                        const String url = payload.substring(urlStart, urlEnd);
-
-                        Serial.println("Download URL: " + url);
-                        downloadUrl = url;
-
-                        executeOTA();
-                    }
-                } else {
-                    Serial.println("The firmware is up to date.");
-                }
-            }
-        } else {
-            Serial.printf("Error retrieving API, HTTP code: %d\n", httpCode);
-            updateError = true;
-        }
-        http.end();
-    } else {
+    if (!http.begin(client, apiUrl)) {
         updateError = true;
+        return;
+    }
+
+    http.addHeader("User-Agent", "KYNDORA-OTA-Client");
+    const int httpCode = http.GET();
+
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.printf("Error retrieving API, HTTP code: %d\n", httpCode);
+        updateError = true;
+        http.end();
+        return;
+    }
+
+    updateError = false;
+    const String payload = http.getString();
+    http.end();
+
+    JsonDocument doc;
+    if (deserializeJson(doc, payload)) {
+        Serial.println("Update error: failed to parse release JSON.");
+        updateError = true;
+        return;
+    }
+
+    const String tagName = doc["tag_name"].as<String>();
+    JsonArray assets = doc["assets"].as<JsonArray>();
+
+    String firmwareUrl;
+    String assetUpdatedAt;
+    for (JsonObject asset : assets) {
+        String name = asset["name"].as<String>();
+        if (name.endsWith("firmware.bin")) {
+            firmwareUrl = asset["browser_download_url"].as<String>();
+            assetUpdatedAt = asset["updated_at"].as<String>();
+            break;
+        }
+    }
+
+    if (firmwareUrl.length() == 0) {
+        Serial.println("Update error: no firmware.bin asset found in release.");
+        updateError = true;
+        return;
+    }
+
+    const String remoteVersion = (channel == "stable")
+        ? tagName
+        : tagName + "@" + assetUpdatedAt;
+
+    Serial.println("Applied Version: " + appliedVersion);
+    Serial.println("Remote Version:  " + remoteVersion);
+
+    if (remoteVersion != appliedVersion) {
+        Serial.println("New version found! Downloading...");
+        downloadUrl = firmwareUrl;
+        executeOTA();
+        if (!updateError) {
+            saveAppliedVersion(remoteVersion);
+        }
+    } else {
+        Serial.println("The firmware is up to date.");
     }
 }
 
@@ -104,46 +150,49 @@ void UpdateManager::executeOTA() {
 
     Serial.println("Starting firmware download...");
 
-    if (http.begin(downloadClient, downloadUrl)) {
-        http.addHeader("User-Agent", "ESP32-OTA-Client");
-        const int httpCode = http.GET();
-
-        if (httpCode == HTTP_CODE_OK) {
-            const int contentLength = http.getSize();
-            Serial.printf("File size: %d Bytes\n", contentLength);
-
-            if (Update.begin(contentLength)) {
-                Serial.println("Flashing started. Please do not turn off the box...");
-
-                WiFiClient& stream = http.getStream();
-
-                const size_t written = Update.writeStream(stream);
-
-                if (written == contentLength) {
-                    Serial.println("Written: " + String(written) + " successfully");
-                } else {
-                    Serial.println("Written only: " + String(written) + "/" + String(contentLength) + ". Flash aborted.");
-                }
-
-                if (Update.end()) {
-                    Serial.println("OTA successfully completed!");
-                    if (Update.isFinished()) {
-                        downloadUrl = "";
-                        Serial.println("Update complete. Restarting...");
-                        delay(1000);
-                        ESP.restart();
-                    } else {
-                        Serial.println("Update not completed. Failed.");
-                    }
-                } else {
-                    Serial.printf("An error occurred: #%d\n", Update.getError());
-                }
-            } else {
-                Serial.println("Not enough space in the flash memory for the update.");
-            }
-        } else {
-            Serial.printf("Download failed, HTTP code: %d\n", httpCode);
-        }
-        http.end();
+    if (!http.begin(downloadClient, downloadUrl)) {
+        updateError = true;
+        return;
     }
+
+    http.addHeader("User-Agent", "ESP32-OTA-Client");
+    const int httpCode = http.GET();
+
+    if (httpCode != HTTP_CODE_OK) {
+        Serial.printf("Download failed, HTTP code: %d\n", httpCode);
+        updateError = true;
+        http.end();
+        return;
+    }
+
+    const int contentLength = http.getSize();
+    Serial.printf("File size: %d Bytes\n", contentLength);
+
+    if (!Update.begin(contentLength)) {
+        Serial.println("Not enough space in the flash memory for the update.");
+        updateError = true;
+        http.end();
+        return;
+    }
+
+    Serial.println("Flashing started. Please do not turn off the box...");
+    WiFiClient& stream = http.getStream();
+    const size_t written = Update.writeStream(stream);
+
+    if (written != contentLength) {
+        Serial.println("Written only: " + String(written) + "/" + String(contentLength) + ". Flash aborted.");
+        updateError = true;
+    }
+
+    if (Update.end() && !updateError && Update.isFinished()) {
+        downloadUrl = "";
+        Serial.println("Update complete. Restarting...");
+        delay(1000);
+        ESP.restart();
+    } else {
+        Serial.printf("An error occurred: #%d\n", Update.getError());
+        updateError = true;
+    }
+
+    http.end();
 }
