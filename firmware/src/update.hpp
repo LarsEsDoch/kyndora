@@ -6,6 +6,7 @@ class UpdateManager {
 public:
     explicit UpdateManager(const String& buildVersion, const String& channel, const int& checkUpdateHour);
 
+    void begin();
     void automaticCheckForUpdates();
     void checkForUpdates();
     void executeOTA(const String& newVersion);
@@ -18,6 +19,7 @@ private:
 
     String channel;
     String appliedVersion;
+    String initialBuildVersion;
     String downloadUrl;
 
     bool updateError = false;

@@ -9,7 +9,11 @@
 UpdateManager::UpdateManager(const String& buildVersion, const String& channelIn, const int& checkUpdateHour) {
     channel = channelIn;
     updateHour = checkUpdateHour;
-    appliedVersion = loadAppliedVersion(buildVersion);
+    initialBuildVersion = buildVersion;
+}
+
+void UpdateManager::begin() {
+    appliedVersion = loadAppliedVersion(initialBuildVersion);
     Serial.println("OTA channel: " + channel + " | Applied version: " + appliedVersion);
 }
 

@@ -16,9 +16,9 @@
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
-#define POWER_BUTTON_PIN 7
-#define BACK_BUTTON_PIN 4
-#define FORWARD_BUTTON_PIN 5
+#define POWER_BUTTON_PIN    7
+#define BACK_BUTTON_PIN     4
+#define FORWARD_BUTTON_PIN  5
 #define MISS_YOU_BUTTON_PIN 6
 
 auto ntpServer = "pool.ntp.org";
@@ -63,6 +63,8 @@ WifiIconState getCurrentWifiIconState() {
 
 void setup() {
     Serial.begin(115200);
+
+    updater.begin();
 
     pinMode(POWER_BUTTON_PIN, INPUT_PULLUP);
     pinMode(BACK_BUTTON_PIN, INPUT_PULLUP);
