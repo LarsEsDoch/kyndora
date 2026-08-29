@@ -14,9 +14,6 @@ public:
     void clearNewContentFlag() { _hasNewContent = false; }
     String fetchLatestMessage(const char* backendIp);
 
-    bool hasPendingUpdateCheck() const { return _pendingUpdateCheck; }
-    void clearPendingUpdateCheck() { _pendingUpdateCheck = false; }
-
     bool hasNewWeather() const { return _hasNewWeather; }
     void clearNewWeatherFlag() { _hasNewWeather = false; }
     float getWeatherTemp() const { return _weatherTemp; }
@@ -32,6 +29,11 @@ public:
         _pendingLightCommand = "";
         return command;
     }
+
+    bool hasPendingUpdateCheck() const { return _pendingUpdateCheck; }
+    void clearPendingUpdateCheck() { _pendingUpdateCheck = false; }
+
+    void publishButtonEvent(const String& action);
 
 private:
     void publishHeartbeat();
@@ -50,6 +52,7 @@ private:
     String _contentTopic;
     String _heartbeatTopic;
     String _telemetryTopic;
+    String _buttonTopic;
 
     bool _connected = false;
 

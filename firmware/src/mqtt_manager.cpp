@@ -27,6 +27,7 @@ void MqttManager::begin(const String& deviceId, const String& mqttUser, const St
     _contentTopic = "kyndora/" + _deviceId + "/content";
     _heartbeatTopic = "kyndora/" + _deviceId + "/heartbeat";
     _telemetryTopic = "kyndora/" + _deviceId + "/telemetry";
+    _buttonTopic = "kyndora/" + _deviceId + "/button";
 
     _client.setServer(MQTT_SERVER_URI);
     _client.setCredentials(mqttUser.c_str(), mqttPass.c_str());
@@ -219,4 +220,17 @@ String MqttManager::fetchLatestMessage(const char* backendIp) {
 
     http.end();
     return jsonResponse;
+}
+
+void MqttManager::publishButtonEvent(const String& action) {
+    if (!_connected) return;
+
+    JsonDocument doc;
+    doc["action"] = action;
+
+    char buffer[128];
+    size_t len = serializeJson(doc, buffer, sizeof(buffer));
+
+    _client.publish(_buttonTopic.c_str(), 0, false, buffer, len);
+    Serial.println("Button event published: " + action);
 }

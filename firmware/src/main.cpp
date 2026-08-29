@@ -8,6 +8,7 @@
 #include "light_manager.hpp"
 #include "display_manager.h"
 #include <ArduinoJson.h>
+#include "button_manager.h"
 
 #define PIN_EPD_CS    10
 #define PIN_EPD_DC     9
@@ -16,10 +17,10 @@
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
-#define POWER_BUTTON_PIN    7
-#define BACK_BUTTON_PIN     4
-#define FORWARD_BUTTON_PIN  5
-#define MISS_YOU_BUTTON_PIN 6
+#define PIN_BTN_MISS_YOU 6
+#define PIN_BTN_POWER    7
+#define PIN_BTN_NEXT     5
+#define PIN_BTN_PREV     4
 
 auto ntpServer = "pool.ntp.org";
 String timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
@@ -38,6 +39,7 @@ DisplayManager displayManager(PIN_EPD_CS, PIN_EPD_DC, PIN_EPD_RST, PIN_EPD_BUSY)
 UpdateManager updater(currentVersion, otaChannel, 3, displayManager);
 LightManager lightManager;
 MqttManager mqttManager;
+ButtonManager buttonManager;
 
 int lastMinute = -1;
 int lastFullRefreshDay = -1;
@@ -66,14 +68,10 @@ void setup() {
 
     updater.begin();
 
-    pinMode(POWER_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(BACK_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(FORWARD_BUTTON_PIN, INPUT_PULLUP);
-    pinMode(MISS_YOU_BUTTON_PIN, INPUT_PULLUP);
-
     SPI.begin(PIN_EPD_SCK, -1, PIN_EPD_MOSI, PIN_EPD_CS);
     displayManager.begin();
     lightManager.begin();
+    buttonManager.begin(PIN_BTN_MISS_YOU, PIN_BTN_POWER, PIN_BTN_NEXT, PIN_BTN_PREV);
 
     ProvisioningManager::begin();
 
@@ -115,17 +113,18 @@ void loop() {
     uint32_t now = millis();
 
     ProvisioningManager::handle();
+    buttonManager.handle();
 
     if (now - lastWifiCheck >= wifiCheckInterval) {
         lastWifiCheck = now;
         displayManager.setWifiState(getCurrentWifiIconState());
     }
 
-    if (digitalRead(MISS_YOU_BUTTON_PIN) == LOW) {
-        Serial.println("MISS YOU");
-    }
-
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
+
+        if (buttonManager.hasMissYouPressed()) {
+            mqttManager.publishButtonEvent("miss_you");
+        }
 
         mqttManager.handle();
 

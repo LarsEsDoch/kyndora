@@ -8,6 +8,9 @@ from sqlmodel import Session, select
 from database import engine
 from models import Device, Telemetry
 
+from models import Device, Telemetry, User
+from services.push_service import send_push_to_user
+
 MQTT_BROKER = "192.168.178.32"
 MQTT_PORT = 1883
 
@@ -88,6 +91,39 @@ def on_message(client, userdata, msg):
                         )
                         session.add(telemetry)
                         session.commit()
+
+                elif msg_type == "button":
+                    action = payload.get("action")
+                    device = session.get(Device, db_mac)
+                    if not device:
+                        return
+
+                    owner = session.get(User, device.user_id)
+                    if not owner or not owner.partner_id:
+                        return
+
+                    if action == "miss_you":
+                        partner_device = session.exec(
+                            select(Device).where(Device.user_id == owner.partner_id)
+                        ).first()
+
+                        if partner_device:
+                            partner_mac = partner_device.mac_address.replace(":", "").upper()
+                            client.publish(
+                                f"kyndora/{partner_mac}/commands",
+                                json.dumps({"command": "miss_you"}),
+                            )
+
+                        try:
+                            send_push_to_user(
+                                session,
+                                owner.partner_id,
+                                title=owner.username,
+                                body="is thinking of you 💌",
+                                data={"type": "miss_you"},
+                            )
+                        except Exception as e:
+                            print(f"Push notification failed (button miss_you): {e}")
 
     except json.JSONDecodeError:
         pass
