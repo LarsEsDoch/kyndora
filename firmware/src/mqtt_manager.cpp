@@ -1,104 +1,110 @@
 #include "mqtt_manager.h"
 #include <WiFi.h>
-#include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <Preferences.h>
 
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
-MqttManager* globalMqttInstance = nullptr;
+static const char* MQTT_CA_CERT =
+"-----BEGIN CERTIFICATE-----\n"
+"MIICCTCCAY6gAwIBAgINAgPlwGjvYxqccpBQUjAKBggqhkjOPQQDAzBHMQswCQYD\n"
+"VQQGEwJVUzEiMCAGA1UEChMZR29vZ2xlIFRydXN0IFNlcnZpY2VzIExMQzEUMBIG\n"
+"A1UEAxMLR1RTIFJvb3QgUjQwHhcNMTYwNjIyMDAwMDAwWhcNMzYwNjIyMDAwMDAw\n"
+"WjBHMQswCQYDVQQGEwJVUzEiMCAGA1UEChMZR29vZ2xlIFRydXN0IFNlcnZpY2Vz\n"
+"IExMQzEUMBIGA1UEAxMLR1RTIFJvb3QgUjQwdjAQBgcqhkjOPQIBBgUrgQQAIgNi\n"
+"AATzdHOnaItgrkO4NcWBMHtLSZ37wWHO5t5GvWvVYRg1rkDdc/eJkTBa6zzuhXyi\n"
+"QHY7qca4R9gq55KRanPpsXI5nymfopjTX15YhmUPoYRlBtHci8nHc8iMai/lxKvR\n"
+"HYqjQjBAMA4GA1UdDwEB/wQEAwIBhjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQW\n"
+"BBSATNbrdP9JNqPV2Py1PsVq8JQdjDAKBggqhkjOPQQDAwNpADBmAjEA6ED/g94D\n"
+"9J+uHXqnLrmvT/aDHQ4thQEd0dlq7A/Cr8deVl5c1RxYIigL9zC2L7F8AjEA8GE8\n"
+"p/SgguMh1YQdc4acLa/KNJvxn7kjNuK8YAOdgLOaVsjh4rsUecrNIdSUtUlD\n"
+"-----END CERTIFICATE-----\n";
 
-void globalMqttCallback(char* topic, byte* payload, unsigned int length) {
-    if (globalMqttInstance != nullptr) {
-        globalMqttInstance->handleCallback(topic, payload, length);
-    }
-}
-
-void MqttManager::begin(const String& deviceId, const String& mqttUser, const String& mqttPass, const char* brokerIp) {
+void MqttManager::begin(const String& deviceId, const String& mqttUser, const String& mqttPass) {
     _deviceId = deviceId;
-    _mqttUser = mqttUser;
-    _mqttPass = mqttPass;
-    _brokerIp = brokerIp;
 
-    globalMqttInstance = this;
-    mqttClient.setBufferSize(1024);
-    mqttClient.setServer(_brokerIp, 1883);
-    mqttClient.setCallback(globalMqttCallback);
+    _statusTopic = "kyndora/" + _deviceId + "/status";
+    _commandTopic = "kyndora/" + _deviceId + "/commands";
+    _contentTopic = "kyndora/" + _deviceId + "/content";
+    _heartbeatTopic = "kyndora/" + _deviceId + "/heartbeat";
+    _telemetryTopic = "kyndora/" + _deviceId + "/telemetry";
+
+    _client.setServer(MQTT_SERVER_URI);
+    _client.setCredentials(mqttUser.c_str(), mqttPass.c_str());
+    _client.setClientId(_deviceId.c_str());
+    _client.setCleanSession(true);
+    _client.setKeepAlive(60);
+    _client.setAutoReconnect(true);
+    _client.setBufferSize(2048);
+    _client.setCACert(MQTT_CA_CERT);
+
+    _client.setWill(_statusTopic.c_str(), 1, true, "offline");
+
+    _client.onConnect([this](bool sessionPresent) { onMqttConnect(sessionPresent); });
+    _client.onDisconnect([this](bool sessionPresent) { onMqttDisconnect(sessionPresent); });
+    _client.onError([this](esp_mqtt_error_codes_t error) {
+        Serial.printf("MQTT Error, type=%d\n", error.error_type);
+        _apiError = true;
+    });
+
+    _client.onTopic(_commandTopic.c_str(), 1, [this](char* topic, char* payload, int retain, int qos, bool dup) {
+        onCommandMessage(topic, payload, retain, qos, dup);
+    });
+
+    _client.onTopic(_contentTopic.c_str(), 1, [this](char* topic, char* payload, int retain, int qos, bool dup) {
+        onContentMessage(topic, payload, retain, qos, dup);
+    });
+
+    _client.connect();
 }
 
-void MqttManager::connect() {
-    Serial.print("Attempting MQTT connection...");
+void MqttManager::onMqttConnect(bool sessionPresent) {
+    Serial.println("MQTT connected via WSS.");
+    _connected = true;
+    _apiError = false;
 
-    String statusTopic = "kyndora/" + _deviceId + "/status";
-    String commandTopic = "kyndora/" + _deviceId + "/commands";
-    String contentTopic = "kyndora/" + _deviceId + "/content";
+    _client.publish(_statusTopic.c_str(), 1, true, "online");
 
-    if (mqttClient.connect(_deviceId.c_str(),
-                           _mqttUser.c_str(),
-                           _mqttPass.c_str(),
-                           statusTopic.c_str(),
-                           1,
-                           true,
-                           "offline")) {
+    publishHeartbeat();
+    sendTelemetry();
+}
 
-        Serial.println(" connected!");
-
-        mqttClient.loop();
-
-        mqttClient.publish(statusTopic.c_str(), "online", true);
-
-        mqttClient.subscribe(commandTopic.c_str());
-        mqttClient.subscribe(contentTopic.c_str());
-
-        publishHeartbeat();
-        sendTelemetry();
-                           } else {
-                               Serial.print("failed, rc=");
-                               Serial.print(mqttClient.state());
-                               Serial.println(" - try again in 5 seconds");
-                           }
+void MqttManager::onMqttDisconnect(bool sessionPresent) {
+    Serial.println("MQTT disconnected.");
+    _connected = false;
 }
 
 void MqttManager::publishHeartbeat() {
-    if (!mqttClient.connected()) return;
+    if (!_connected) return;
 
     JsonDocument doc;
     doc["status"] = "online";
     doc["uptime_s"] = millis() / 1000;
-
     doc["battery_level"] = 85;
 
     char buffer[256];
-    serializeJson(doc, buffer);
+    size_t len = serializeJson(doc, buffer, sizeof(buffer));
 
-    String topic = "kyndora/" + _deviceId + "/heartbeat";
-
-    mqttClient.publish(topic.c_str(), buffer);
+    _client.publish(_heartbeatTopic.c_str(), 0, false, buffer, len);
     Serial.println("Heartbeat published!");
 }
 
 void MqttManager::sendTelemetry() {
-    if (!mqttClient.connected()) return;
+    if (!_connected) return;
 
     JsonDocument doc;
-
     doc["rssi"] = WiFi.RSSI();
     doc["ssid"] = WiFi.SSID();
-
     doc["fw_version"] = FW_VERSION;
     doc["free_heap"] = ESP.getFreeHeap();
     doc["core_temp"] = temperatureRead();
-
     doc["battery_v"] = 3.9;
     doc["battery_percent"] = 85;
 
     char buffer[512];
-    serializeJson(doc, buffer);
+    size_t len = serializeJson(doc, buffer, sizeof(buffer));
 
-    String topic = "kyndora/" + _deviceId + "/telemetry";
-
-    if (mqttClient.publish(topic.c_str(), buffer)) {
+    int msgId = _client.publish(_telemetryTopic.c_str(), 0, false, buffer, len);
+    if (msgId != -1) {
         Serial.println("Telemetry sent!");
     } else {
         Serial.println("Failed to send telemetry.");
@@ -106,111 +112,86 @@ void MqttManager::sendTelemetry() {
 }
 
 void MqttManager::handle() {
-    if (WiFi.status() != WL_CONNECTED) return;
+    if (!_connected) return;
 
-    if (!mqttClient.connected()) {
-        unsigned long now = millis();
-        if (now - _lastReconnectAttempt > 5000) {
-            _lastReconnectAttempt = now;
-            connect();
-        }
-    } else {
-        mqttClient.loop();
-
-        unsigned long now = millis();
-        if (now - _lastHeartbeat > HEARTBEAT_INTERVAL) {
-            _lastHeartbeat = now;
-            publishHeartbeat();
-        }
-        if (now - _lastTelemetry > TELEMETRY_INTERVAL) {
-            _lastTelemetry = now;
-            sendTelemetry();
-        }
+    unsigned long now = millis();
+    if (now - _lastHeartbeat > HEARTBEAT_INTERVAL) {
+        _lastHeartbeat = now;
+        publishHeartbeat();
+    }
+    if (now - _lastTelemetry > TELEMETRY_INTERVAL) {
+        _lastTelemetry = now;
+        sendTelemetry();
     }
 }
 
-void MqttManager::handleCallback(char* topic, byte* payload, unsigned int length) {
-    String message = "";
-    for (unsigned int i = 0; i < length; i++) {
-        message += (char)payload[i];
-    }
+void MqttManager::onCommandMessage(char* topic, char* payload, int retain, int qos, bool dup) {
+    Serial.print("Command received: ");
+    Serial.println(payload);
 
-    Serial.print("Message received on Topic: ");
-    Serial.println(topic);
-    Serial.print("Payload: ");
-    Serial.println(message);
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
 
-    String expectedCommandTopic = "kyndora/" + _deviceId + "/commands";
-    String expectedContentTopic = "kyndora/" + _deviceId + "/content";
-
-    if (String(topic) == expectedCommandTopic) {
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, message);
-
-        if (!error && doc["command"] == "set_timezone") {
-            String newTz = doc["tz"].as<String>();
-
-            Preferences prefs;
-            prefs.begin("kyndora", false);
-            prefs.putString("timezone", newTz);
-            prefs.end();
-
-            configTzTime(newTz.c_str(), "pool.ntp.org");
-            Serial.println("Timezone succesful updated!");
-        }
-        else if (!error && doc["command"] == "set_weather") {
-            _weatherTemp = doc["temp"].as<float>();
-            _weatherCode = doc["code"].as<int>();
-            _weatherIsDay = doc["is_day"].as<bool>();
-            _weatherWindy = doc["windy"].as<bool>();
-            _hasNewWeather = true;
-            Serial.println("Weather data received.");
-        }
-        else if (!error && doc["command"] == "rainbow") {
-            _pendingLightCommand = "rainbow";
-            Serial.println("Received command: Rainbow mode");
-        }
-        else if (!error && doc["command"] == "warm_white") {
-            _pendingLightCommand = "warm_white";
-            Serial.println("Received command: Warm white mode");
-        }
-        else if (!error && doc["command"] == "miss_you") {
-            _pendingLightCommand = "miss_you";
-            Serial.println("Received command: Miss you animation");
-        }
-        else if (message == "restart") {
+    if (error) {
+        String message = String(payload);
+        if (message == "restart") {
             Serial.println("Received command: Restart in 3 seconds...");
             delay(3000);
             ESP.restart();
-        }
-        else if (message == "restart") {
-            Serial.println("Received command: Restart in 3 seconds...");
-            delay(3000);
-            ESP.restart();
-        }
-        else if (message == "factory_reset") {
+        } else if (message == "factory_reset") {
             Serial.println("Received command: Resetting Kyndora settings and restarting in 3 seconds...");
             Preferences prefs;
             prefs.begin("kyndora", false);
             prefs.clear();
             prefs.end();
-
             delay(3000);
             ESP.restart();
-        }
-        else {
+        } else {
             Serial.println("Unknown command.");
         }
+        return;
     }
-    else if (String(topic) == expectedContentTopic) {
-        JsonDocument doc;
-        DeserializationError error = deserializeJson(doc, message);
 
-        if (!error && doc["action"] == "fetch_new") {
-            Serial.println("Ping from backend! Set flag to download new content.");
+    String command = doc["command"] | "";
 
-            _hasNewContent = true;
-        }
+    if (command == "set_timezone") {
+        String newTz = doc["tz"].as<String>();
+
+        Preferences prefs;
+        prefs.begin("kyndora", false);
+        prefs.putString("timezone", newTz);
+        prefs.end();
+
+        configTzTime(newTz.c_str(), "pool.ntp.org");
+        Serial.println("Timezone succesful updated!");
+    } else if (command == "set_weather") {
+        _weatherTemp = doc["temp"].as<float>();
+        _weatherCode = doc["code"].as<int>();
+        _weatherIsDay = doc["is_day"].as<bool>();
+        _weatherWindy = doc["windy"].as<bool>();
+        _hasNewWeather = true;
+        Serial.println("Weather data received.");
+    } else if (command == "rainbow") {
+        _pendingLightCommand = "rainbow";
+        Serial.println("Received command: Rainbow mode");
+    } else if (command == "warm_white") {
+        _pendingLightCommand = "warm_white";
+        Serial.println("Received command: Warm white mode");
+    } else if (command == "miss_you") {
+        _pendingLightCommand = "miss_you";
+        Serial.println("Received command: Miss you animation");
+    } else {
+        Serial.println("Unknown command.");
+    }
+}
+
+void MqttManager::onContentMessage(char* topic, char* payload, int retain, int qos, bool dup) {
+    JsonDocument doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (!error && doc["action"] == "fetch_new") {
+        Serial.println("Ping from backend! Set flag to download new content.");
+        _hasNewContent = true;
     }
 }
 
@@ -227,7 +208,6 @@ String MqttManager::fetchLatestMessage(const char* backendIp) {
 
     if (httpCode == HTTP_CODE_OK) {
         jsonResponse = http.getString();
-        Serial.println("Feed-Data successful fetched.");
         _apiError = false;
     } else {
         Serial.printf("HTTP GET failed, Error: %s\n", http.errorToString(httpCode).c_str());

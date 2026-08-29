@@ -16,6 +16,11 @@
 #define PIN_EPD_SCK   12
 #define PIN_EPD_MOSI  11
 
+#define POWER_BUTTON_PIN 7
+#define BACK_BUTTON_PIN 4
+#define FORWARD_BUTTON_PIN 5
+#define MISS_YOU_BUTTON_PIN 6
+
 auto ntpServer = "pool.ntp.org";
 String timeZone  = "CET-1CEST,M3.5.0,M10.5.0/3";
 
@@ -53,6 +58,11 @@ WifiIconState getCurrentWifiIconState() {
 void setup() {
     Serial.begin(115200);
 
+    pinMode(POWER_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(BACK_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(FORWARD_BUTTON_PIN, INPUT_PULLUP);
+    pinMode(MISS_YOU_BUTTON_PIN, INPUT_PULLUP);
+
     SPI.begin(PIN_EPD_SCK, -1, PIN_EPD_MOSI, PIN_EPD_CS);
     displayManager.begin();
     lightManager.begin();
@@ -87,9 +97,7 @@ void setup() {
         String deviceId = WiFi.macAddress();
         deviceId.replace(":", "");
 
-        const char* brokerIp = "192.168.178.32";
-
-        mqttManager.begin(deviceId, mqttUser, mqttPass, brokerIp);
+        mqttManager.begin(deviceId, mqttUser, mqttPass);
     } else {
         displayManager.showSetupScreen();
     }
@@ -103,6 +111,10 @@ void loop() {
     if (now - lastWifiCheck >= wifiCheckInterval) {
         lastWifiCheck = now;
         displayManager.setWifiState(getCurrentWifiIconState());
+    }
+
+    if (digitalRead(MISS_YOU_BUTTON_PIN) == LOW) {
+        Serial.println("MISS YOU");
     }
 
     if (ProvisioningManager::isProvisioned() && WiFi.status() == WL_CONNECTED) {
