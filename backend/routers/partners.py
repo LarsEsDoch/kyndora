@@ -273,7 +273,7 @@ def set_return_time(
         session,
         current_user,
         "set_return_time",
-        {"timestamp": data.timestamp.isoformat()},
+        {"timestamp": data.timestamp.timestamp()},
     )
 
     if current_user.partner_id:

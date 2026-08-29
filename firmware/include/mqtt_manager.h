@@ -35,6 +35,10 @@ public:
 
     void publishButtonEvent(const String& action);
 
+    bool hasNewReturnTime() const { return _hasNewReturnTime; }
+    void clearNewReturnTimeFlag() { _hasNewReturnTime = false; }
+    time_t getReturnTime() const { return _returnTime; }
+
 private:
     void publishHeartbeat();
     void sendTelemetry();
@@ -63,6 +67,9 @@ private:
     int _weatherCode = 0;
     bool _weatherIsDay = true;
     bool _weatherWindy = false;
+    
+    bool _hasNewReturnTime = false;
+    time_t _returnTime = 0;
 
     bool _apiError = false;
 

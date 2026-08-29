@@ -81,6 +81,8 @@ void setup() {
         timeZone = preferences.getString("timezone", "CET-1CEST,M3.5.0,M10.5.0/3");
         String mqttUser = preferences.getString("mqtt_user", "");
         String mqttPass = preferences.getString("mqtt_pass", "");
+        time_t returnTime = (time_t)preferences.getULong64("return_time", 0);
+        Serial.printf("Loaded return time of %llu\n", (unsigned long long) returnTime);
         preferences.end();
 
         configTzTime(timeZone.c_str(), ntpServer);
@@ -96,6 +98,9 @@ void setup() {
         displayManager.setTime(timeInfo.tm_hour, timeInfo.tm_min);
         lastMinute = timeInfo.tm_min;
         lastFullRefreshDay = timeInfo.tm_mday;
+
+        if (returnTime > 0) {
+        }
 
         displayManager.setWifiState(getCurrentWifiIconState());
         displayManager.renderFull();
@@ -162,6 +167,10 @@ void loop() {
                 mqttManager.getWeatherIsDay(),
                 mqttManager.getWeatherWindy()
             );
+        }
+
+        if (mqttManager.hasNewReturnTime()) {
+            mqttManager.clearNewReturnTimeFlag();
         }
 
         if (mqttManager.hasNewContent()) {

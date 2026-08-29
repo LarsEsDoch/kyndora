@@ -175,6 +175,18 @@ void MqttManager::onCommandMessage(char* topic, char* payload, int retain, int q
         _weatherWindy = doc["windy"].as<bool>();
         _hasNewWeather = true;
         Serial.println("Weather data received.");
+    } else if (command == "set_return_time") {
+        time_t timestamp = doc["timestamp"].as<time_t>();
+
+        Preferences prefs;
+        prefs.begin("kyndora", false);
+        prefs.putULong64("return_time", (uint64_t)timestamp);
+        prefs.end();
+
+        _returnTime = timestamp;
+        _hasNewReturnTime = true;
+
+        Serial.printf("Return time saved: %llu\n", (unsigned long long)timestamp);
     } else if (command == "rainbow") {
         _pendingLightCommand = "rainbow";
         Serial.println("Received command: Rainbow mode");
