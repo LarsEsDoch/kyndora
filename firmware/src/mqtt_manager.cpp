@@ -180,6 +180,9 @@ void MqttManager::onCommandMessage(char* topic, char* payload, int retain, int q
     } else if (command == "miss_you") {
         _pendingLightCommand = "miss_you";
         Serial.println("Received command: Miss you animation");
+    } else if (!error && doc["command"] == "check_update") {
+        _pendingUpdateCheck = true;
+        Serial.println("Received command: Check for updates now");
     } else {
         Serial.println("Unknown command.");
     }

@@ -255,6 +255,12 @@ class _DeviceDetailScreenState extends State<DeviceDetailScreen> {
               title: const Text("Firmware & Updates"),
               children: [
                 ListTile(title: const Text("Current Firmware Version"), trailing: Text(_firmwareVersion)),
+                ListTile(
+                  leading: const Icon(Icons.system_update_alt, color: Colors.blue),
+                  title: const Text("Update Now"),
+                  subtitle: const Text("Check for and install a new firmware version"),
+                  onTap: () => _executeCommand('check_update'),
+                ),
                 SwitchListTile(title: const Text("Automatic Updates"), value: _autoUpdate, onChanged: (v) { setState(() => _autoUpdate = v); _syncSetting('auto_update', v); }),
                 ListTile(
                   title: const Text("Update Schedule"),

@@ -14,6 +14,9 @@ public:
     void clearNewContentFlag() { _hasNewContent = false; }
     String fetchLatestMessage(const char* backendIp);
 
+    bool hasPendingUpdateCheck() const { return _pendingUpdateCheck; }
+    void clearPendingUpdateCheck() { _pendingUpdateCheck = false; }
+
     bool hasNewWeather() const { return _hasNewWeather; }
     void clearNewWeatherFlag() { _hasNewWeather = false; }
     float getWeatherTemp() const { return _weatherTemp; }
@@ -61,6 +64,8 @@ private:
     bool _apiError = false;
 
     String _pendingLightCommand = "";
+
+    bool _pendingUpdateCheck = false;
 
     unsigned long _lastHeartbeat = 0;
     unsigned long _lastTelemetry = 0;

@@ -141,6 +141,11 @@ void loop() {
             }
         }
 
+        if (mqttManager.hasPendingUpdateCheck()) {
+            mqttManager.clearPendingUpdateCheck();
+            updater.checkForUpdates();
+        }
+
         lightManager.handle();
 
         lightManager.handle();
