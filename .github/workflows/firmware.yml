@@ -37,6 +37,14 @@ jobs:
       - name: Install PlatformIO
         run: pip install --upgrade platformio
 
+      - name: Determine Firmware Version
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "FW_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          else
+            echo "FW_VERSION=beta-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+
       - name: Run PlatformIO Build
         run: pio run
         working-directory: firmware
