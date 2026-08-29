@@ -8,7 +8,7 @@ public:
 
     void automaticCheckForUpdates();
     void checkForUpdates();
-    void executeOTA();
+    void executeOTA(const String& newVersion);
 
     bool hasUpdateError() const { return updateError; }
 

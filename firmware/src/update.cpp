@@ -44,6 +44,7 @@ void UpdateManager::automaticCheckForUpdates() {
         if (lastCheckDay != timeInfo.tm_mday) {
             lastCheckDay = timeInfo.tm_mday;
             Serial.println("Update time reached.");
+            Serial.printf("Using channel: %s \n", channel.c_str());
             checkForUpdates();
         }
     }
@@ -83,7 +84,7 @@ void UpdateManager::checkForUpdates() {
     const int httpCode = http.GET();
 
     if (httpCode != HTTP_CODE_OK) {
-        Serial.printf("Error retrieving API, HTTP code: %d\n", httpCode);
+        Serial.printf("Error retrieving API %s, HTTP code: %d\n", apiUrl.c_str(), httpCode);
         updateError = true;
         http.end();
         return;
@@ -127,10 +128,12 @@ void UpdateManager::checkForUpdates() {
     Serial.println("Applied Version: " + appliedVersion);
     Serial.println("Remote Version:  " + remoteVersion);
 
-    if (remoteVersion != appliedVersion) {
+    String localVersion = appliedVersion;
+
+    if (remoteVersion != localVersion) {
         Serial.println("New version found! Downloading...");
         downloadUrl = firmwareUrl;
-        executeOTA();
+        executeOTA(remoteVersion);
         if (!updateError) {
             saveAppliedVersion(remoteVersion);
         }
@@ -139,7 +142,7 @@ void UpdateManager::checkForUpdates() {
     }
 }
 
-void UpdateManager::executeOTA() {
+void UpdateManager::executeOTA(const String& newVersion) {
     if (downloadUrl.length() == 0) return;
 
     WiFiClientSecure downloadClient;
@@ -186,6 +189,7 @@ void UpdateManager::executeOTA() {
 
     if (Update.end() && !updateError && Update.isFinished()) {
         downloadUrl = "";
+        saveAppliedVersion(newVersion);
         Serial.println("Update complete. Restarting...");
         delay(1000);
         ESP.restart();
