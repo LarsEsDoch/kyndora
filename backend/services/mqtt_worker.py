@@ -6,8 +6,6 @@ import paho.mqtt.client as mqtt
 from sqlmodel import Session, select
 
 from database import engine
-from models import Device, Telemetry
-
 from models import Device, Telemetry, User
 from services.push_service import send_push_to_user
 
