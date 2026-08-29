@@ -1,5 +1,7 @@
 #include "display_manager.h"
 #include "FreeSansBold36pt7b.h"
+#include "Fonts/FreeSansBold18pt7b.h"
+#include "Fonts/FreeSansBold12pt7b.h"
 #include "icons.h"
 
 DisplayManager::DisplayManager(int8_t cs, int8_t dc, int8_t rst, int8_t busy)
@@ -14,24 +16,87 @@ void DisplayManager::begin() {
 
 void DisplayManager::showSetupScreen() {
     _display.setFullWindow();
+
+    const char* line1 = "Setup Device";
+    const char* line2 = "via Kyndora App!";
+    
+    _display.setFont(&FreeSansBold18pt7b);
+    _display.setTextSize(1);
+    int16_t x1_1, y1_1;
+    uint16_t tw1, th1;
+    _display.getTextBounds(line1, 0, 0, &x1_1, &y1_1, &tw1, &th1);
+
+    _display.setFont(&FreeSansBold12pt7b);
+    _display.setTextSize(1);
+    int16_t x1_2, y1_2;
+    uint16_t tw2, th2;
+    _display.getTextBounds(line2, 0, 0, &x1_2, &y1_2, &tw2, &th2);
+
+    int16_t lineSpacing = 20;
+    uint16_t totalHeight = th1 + lineSpacing + th2;
+
+    int16_t cursorX1 = (_display.width() - tw1) / 2 - x1_1;
+    int16_t cursorX2 = (_display.width() - tw2) / 2 - x1_2;
+
+    int16_t startY = (_display.height() - totalHeight) / 2;
+
+    int16_t cursorY1 = startY - y1_1;
+    int16_t cursorY2 = startY + th1 + lineSpacing - y1_2;
+
     _display.firstPage();
-
-    const char* text = "Awaiting Setup via Bluetooth";
-
-    _display.setFont();
-    _display.setTextSize(3);
-
-    int16_t x1, y1;
-    uint16_t tw, th;
-    _display.getTextBounds(text, 0, 0, &x1, &y1, &tw, &th);
-
-    int16_t cursorX = (_display.width() - tw) / 2 - x1;
-    int16_t cursorY = (_display.height() - th) / 2 - y1;
-
     do {
         _display.fillScreen(GxEPD_WHITE);
-        _display.setCursor(cursorX, cursorY);
-        _display.print(text);
+
+        _display.setFont(&FreeSansBold18pt7b);
+        _display.setCursor(cursorX1, cursorY1);
+        _display.print(line1);
+
+        _display.setFont(&FreeSansBold12pt7b);
+        _display.setCursor(cursorX2, cursorY2);
+        _display.print(line2);
+    } while (_display.nextPage());
+}
+
+void DisplayManager::showUpdateScreen() {
+    _display.setFullWindow();
+
+    const char* line1 = "Updating...";
+    const char* line2 = "Please do not unplug the device...";
+
+    _display.setFont(&FreeSansBold18pt7b);
+    _display.setTextSize(1);
+    int16_t x1_1, y1_1;
+    uint16_t tw1, th1;
+    _display.getTextBounds(line1, 0, 0, &x1_1, &y1_1, &tw1, &th1);
+
+    _display.setFont(&FreeSansBold12pt7b);
+    _display.setTextSize(1);
+    int16_t x1_2, y1_2;
+    uint16_t tw2, th2;
+    _display.getTextBounds(line2, 0, 0, &x1_2, &y1_2, &tw2, &th2);
+
+    int16_t lineSpacing = 20;
+    uint16_t totalHeight = th1 + lineSpacing + th2;
+
+    int16_t cursorX1 = (_display.width() - tw1) / 2 - x1_1;
+    int16_t cursorX2 = (_display.width() - tw2) / 2 - x1_2;
+
+    int16_t startY = (_display.height() - totalHeight) / 2;
+
+    int16_t cursorY1 = startY - y1_1;
+    int16_t cursorY2 = startY + th1 + lineSpacing - y1_2;
+
+    _display.firstPage();
+    do {
+        _display.fillScreen(GxEPD_WHITE);
+
+        _display.setFont(&FreeSansBold18pt7b);
+        _display.setCursor(cursorX1, cursorY1);
+        _display.print(line1);
+
+        _display.setFont(&FreeSansBold12pt7b);
+        _display.setCursor(cursorX2, cursorY2);
+        _display.print(line2);
     } while (_display.nextPage());
 }
 
