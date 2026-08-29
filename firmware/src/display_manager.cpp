@@ -15,12 +15,23 @@ void DisplayManager::begin() {
 void DisplayManager::showSetupScreen() {
     _display.setFullWindow();
     _display.firstPage();
+
+    const char* text = "Awaiting Setup via Bluetooth";
+
+    _display.setFont();
+    _display.setTextSize(3);
+
+    int16_t x1, y1;
+    uint16_t tw, th;
+    _display.getTextBounds(text, 0, 0, &x1, &y1, &tw, &th);
+
+    int16_t cursorX = (_display.width() - tw) / 2 - x1;
+    int16_t cursorY = (_display.height() - th) / 2 - y1;
+
     do {
         _display.fillScreen(GxEPD_WHITE);
-        _display.setFont();
-        _display.setTextSize(2);
-        _display.setCursor(30, _display.height() / 2);
-        _display.print("Awaiting Setup via Bluetooth");
+        _display.setCursor(cursorX, cursorY);
+        _display.print(text);
     } while (_display.nextPage());
 }
 
