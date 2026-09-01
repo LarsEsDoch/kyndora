@@ -82,7 +82,7 @@ private:
     const unsigned long HEARTBEAT_INTERVAL = 60000;
     const unsigned long TELEMETRY_INTERVAL = 3600000;
 
-    const String FW_VERSION = "0.1.0";
+    const String FW_VERSION = "1.0.0";
 
     static constexpr const char* MQTT_SERVER_URI = "wss://mqtt.bogatzhome.com";
 };
