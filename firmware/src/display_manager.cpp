@@ -19,7 +19,7 @@ void DisplayManager::showSetupScreen() {
 
     const char* line1 = "Setup Device";
     const char* line2 = "via Kyndora App!";
-    
+
     _display.setFont(&FreeSansBold18pt7b);
     _display.setTextSize(1);
     int16_t x1_1, y1_1;
@@ -100,6 +100,41 @@ void DisplayManager::showUpdateScreen() {
     } while (_display.nextPage());
 }
 
+void DisplayManager::updateCountdown() {
+    if (_returnTime == 0) {
+        setCountdownText("");
+        return;
+    }
+
+    time_t now;
+    time(&now);
+    long diff = _returnTime - now;
+
+    if (diff <= 0) {
+        setCountdownText("Finally!");
+        return;
+    }
+
+    int days = diff / 86400;
+    int hours = (diff % 86400) / 3600;
+    int minutes = (diff % 3600) / 60;
+
+    String dStr = (days == 1) ? " Day, " : " Days, ";
+    String hStr = (hours == 1) ? " Hour and " : " Hours and ";
+    String mStr = (minutes == 1) ? " Minute" : " Minutes";
+
+    String text = "";
+    if (days > 0) {
+        text = String(days) + dStr + String(hours) + hStr + String(minutes) + mStr;
+    } else if (hours > 0) {
+        text = String(hours) + hStr + String(minutes) + mStr;
+    } else {
+        text = String(minutes) + mStr;
+    }
+
+    setCountdownText(text);
+}
+
 void DisplayManager::setWifiState(WifiIconState state) {
     if (_wifiInitialized && _wifiState == state) return;
     _wifiState = state;
@@ -149,6 +184,11 @@ void DisplayManager::setDoodle(const String& hexString) {
 
     _hasDoodle = true;
     updateImagesRow();
+}
+
+void DisplayManager::setReturnTime(time_t timestamp) {
+    _returnTime = timestamp;
+    updateCountdown();
 }
 
 void DisplayManager::setCountdownText(const String& text) {

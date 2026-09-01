@@ -100,6 +100,7 @@ void setup() {
         lastFullRefreshDay = timeInfo.tm_mday;
 
         if (returnTime > 0) {
+            displayManager.setReturnTime(returnTime);
         }
 
         displayManager.setWifiState(getCurrentWifiIconState());
@@ -171,6 +172,7 @@ void loop() {
 
         if (mqttManager.hasNewReturnTime()) {
             mqttManager.clearNewReturnTimeFlag();
+            displayManager.setReturnTime(mqttManager.getReturnTime());
         }
 
         if (mqttManager.hasNewContent()) {
@@ -204,6 +206,7 @@ void loop() {
         if (timeInfo.tm_min != lastMinute) {
             lastMinute = timeInfo.tm_min;
             displayManager.setTime(timeInfo.tm_hour, timeInfo.tm_min);
+            displayManager.updateCountdown();
         }
 
         if (timeInfo.tm_mday != lastFullRefreshDay) {

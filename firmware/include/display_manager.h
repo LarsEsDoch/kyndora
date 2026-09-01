@@ -30,6 +30,8 @@ public:
     void setCountdownText(const String& text);
     void setLocationText(const String& text);
     void setLocationStale(bool stale);
+    void setReturnTime(time_t timestamp);
+    void updateCountdown();
 
     void renderFull();
 
@@ -77,6 +79,8 @@ private:
     bool _weatherIsDay = true;
     bool _weatherWindy = false;
 
+    time_t _returnTime = 0;
+
     String _message = "";
     bool _hasMessageTimestamp = false;
     tm _messageTm{};
@@ -84,7 +88,7 @@ private:
     uint8_t _doodleBuffer[800] = {};
     bool _hasDoodle = false;
 
-    String _countdownText = "63 Days, 11 Hours and 11 Minutes";
+    String _countdownText = "";
     String _locationText = "At home";
 
     uint16_t _partialUpdateCount = 0;
