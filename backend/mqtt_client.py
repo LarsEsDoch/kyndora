@@ -1,3 +1,5 @@
+import os
+
 import paho.mqtt.client as mqtt
 from dotenv import load_dotenv
 
@@ -10,6 +12,8 @@ client = mqtt.Client(client_id="kyndora_backend")
 
 
 def connect_mqtt():
+    admin_password = os.getenv("MQTT_PASSWORD", "admin123")
+    client.username_pw_set("admin", admin_password)
     try:
         client.connect(MQTT_BROKER, MQTT_PORT, 60)
         client.loop_start()
