@@ -92,10 +92,14 @@ void MqttManager::publishHeartbeat() {
 void MqttManager::sendTelemetry() {
     if (!_connected) return;
 
+    preferences.begin("kyndora", true);
+    fw_version = preferences.getString("fw_applied", "");
+    preferences.end();
+
     JsonDocument doc;
     doc["rssi"] = WiFi.RSSI();
     doc["ssid"] = WiFi.SSID();
-    doc["fw_version"] = FW_VERSION;
+    doc["fw_version"] = fw_version;
     doc["free_heap"] = ESP.getFreeHeap();
     doc["core_temp"] = temperatureRead();
     doc["battery_v"] = 3.9;
