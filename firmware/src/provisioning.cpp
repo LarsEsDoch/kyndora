@@ -20,6 +20,10 @@ bool ProvisioningManager::dataReceivedReady = false;
 bool ProvisioningManager::provisionedState = false;
 bool ProvisioningManager::stateChecked = false;
 
+volatile bool ProvisioningManager::wifiConnected = false;
+bool ProvisioningManager::awaitingWifiForRegistration = false;
+uint32_t ProvisioningManager::wifiConnectAttemptStart = 0;
+
 BLEServer* pServer = nullptr;
 
 class MyCallbacks : public BLECharacteristicCallbacks {
@@ -92,12 +96,31 @@ void ProvisioningManager::reset() {
     ESP.restart();
 }
 
+void ProvisioningManager::onWiFiEvent(WiFiEvent_t event) {
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            Serial.println("WiFi event: got IP.");
+            wifiConnected = true;
+            break;
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            if (wifiConnected) {
+                Serial.println("WiFi event: disconnected.");
+            }
+            wifiConnected = false;
+            break;
+        default:
+            break;
+    }
+}
+
 void ProvisioningManager::begin() {
+    WiFi.onEvent(onWiFiEvent);
+
     if (!isProvisioned()) {
         Serial.println("Device not provisioned. Starting BLE Setup Mode...");
         startBLEServer();
     } else {
-        Serial.println("Device already provisioned. Proceeding to connect WiFi...");
+        Serial.println("Device already provisioned. Connecting to WiFi (async)...");
         connectToWiFi();
     }
 }
@@ -141,24 +164,26 @@ void ProvisioningManager::handle() {
         dataReceivedReady = false;
 
         stopBLEServer();
-        delay(500);
+        delay(200);
 
+        wifiConnected = false;
         WiFi.begin(tempSSID.c_str(), tempPassword.c_str());
-        Serial.print("Connecting to new Wi-Fi");
+        Serial.println("Connecting to new Wi-Fi (async)...");
 
-        int attempts = 0;
-        while (WiFi.status() != WL_CONNECTED && attempts < 30) {
-            delay(500);
-            Serial.print(".");
-            attempts++;
-        }
+        awaitingWifiForRegistration = true;
+        wifiConnectAttemptStart = millis();
+        return;
+    }
 
-        if (WiFi.status() == WL_CONNECTED) {
-            Serial.println("\nWi-Fi connected!");
+    if (awaitingWifiForRegistration) {
+        if (wifiConnected) {
+            awaitingWifiForRegistration = false;
+            Serial.println("Wi-Fi connected, exchanging ticket...");
             exchangeTicketForCredentials();
-        } else {
-            stopBLEServer();
-            Serial.println("\nFailed to connect to Wi-Fi. Restarting BLE...");
+        } else if (millis() - wifiConnectAttemptStart > WIFI_CONNECT_TIMEOUT_MS) {
+            awaitingWifiForRegistration = false;
+            Serial.println("Wi-Fi connect timed out during provisioning. Restarting BLE setup...");
+            WiFi.disconnect(true);
             startBLEServer();
         }
     }
@@ -168,13 +193,9 @@ void ProvisioningManager::connectToWiFi() {
     String ssid = getSavedSSID();
     String pass = getSavedPassword();
 
+    wifiConnected = false;
     WiFi.begin(ssid.c_str(), pass.c_str());
-    Serial.print("Connecting to saved Wi-Fi");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("\nWi-Fi connected!");
+    Serial.println("Connecting to saved Wi-Fi (async)...");
 }
 
 void ProvisioningManager::exchangeTicketForCredentials() {
@@ -213,7 +234,7 @@ void ProvisioningManager::exchangeTicketForCredentials() {
         } else {
             Serial.printf("Provisioning failed. HTTP Code: %d\n", httpCode);
             Serial.println(http.getString());
-            WiFi.disconnect();
+            WiFi.disconnect(true);
             startBLEServer();
         }
         http.end();

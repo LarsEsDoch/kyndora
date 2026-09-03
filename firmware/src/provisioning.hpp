@@ -16,6 +16,8 @@ public:
 
     static void reset();
 
+    static bool isWiFiConnected() { return wifiConnected; }
+
     static String getSavedSSID();
     static String getSavedPassword();
     static String getSavedJWT();
@@ -27,6 +29,7 @@ private:
     static void stopBLEServer();
     static void connectToWiFi();
     static void exchangeTicketForCredentials();
+    static void onWiFiEvent(WiFiEvent_t event);
 
     static Preferences preferences;
 
@@ -37,4 +40,9 @@ private:
 
     static bool provisionedState;
     static bool stateChecked;
+
+    static volatile bool wifiConnected;
+    static bool awaitingWifiForRegistration;
+    static uint32_t wifiConnectAttemptStart;
+    static constexpr uint32_t WIFI_CONNECT_TIMEOUT_MS = 20000;
 };
