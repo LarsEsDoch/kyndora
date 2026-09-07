@@ -59,10 +59,9 @@ def _send_webpush(subscription_json: str, title: str, body: str, data: dict) -> 
         return True
     except WebPushException as e:
         status = getattr(e.response, "status_code", None)
-        if status in (404, 410):
-            return False
-        print(f"WebPush error: {e}")
-        return True
+        body = getattr(e.response, "text", "") if e.response else ""
+        print(f"WebPush error (status={status}): {body}")
+        return status not in (401, 403, 404, 410)
     except Exception as e:
         print(f"WebPush error: {e}")
         return True
