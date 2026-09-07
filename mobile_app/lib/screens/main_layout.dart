@@ -39,9 +39,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     RealtimeService.instance.connect(widget.token);
     _eventSubscription = RealtimeService.instance.events.listen(_handleEvent);
 
-    if (!kIsWeb) {
-      push.initPushNotifications(widget.token);
-    }
+    push.initPushNotifications(widget.token);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       checkAndShowPendingPartnerRequests(context, widget.token);
@@ -60,6 +58,7 @@ class _MainLayoutState extends State<MainLayout> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       RealtimeService.instance.connect(widget.token);
       checkAndShowPendingPartnerRequests(context, widget.token);
+      push.initPushNotifications(widget.token);
     }
   }
 
