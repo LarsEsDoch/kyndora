@@ -37,18 +37,21 @@ def authenticate_mqtt_client(request: MqttAuthRequest, response: Response):
         return {"ok": True}
 
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"])
-        sub = payload.get("sub", "")
+        try:
+            payload = jwt.decode(token, secret, algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            payload = jwt.decode(
+                token, secret, algorithms=["HS256"], options={"verify_exp": False}
+            )
+            if payload.get("role") != "device":
+                raise
 
+        sub = payload.get("sub", "")
         if (
             request.clientid
             and sub.replace(":", "").upper() == request.clientid.upper()
         ):
             return {"ok": True}
-
-        if payload:
-            return {"ok": True}
-
     except Exception as e:
         print(f"MQTT Auth failed: {e!s}")
 

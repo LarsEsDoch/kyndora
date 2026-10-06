@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -222,7 +222,8 @@ def register_device(
         device.user_id = ticket.user_id
 
     device_jwt = create_access_token(
-        data={"sub": request.mac_address, "role": "device"}
+        data={"sub": request.mac_address, "role": "device"},
+        expires_delta=timedelta(days=3650),
     )
 
     session.delete(ticket)
