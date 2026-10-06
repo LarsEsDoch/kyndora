@@ -55,6 +55,10 @@ def _send_webpush(subscription_json: str, title: str, body: str, data: dict) -> 
             data=payload,
             vapid_private_key=VAPID_PRIVATE_KEY,
             vapid_claims={"sub": VAPID_CLAIMS_EMAIL},
+            ttl=86400,
+            headers={
+                "Urgency": "high",
+            },
         )
         return True
     except WebPushException as e:
