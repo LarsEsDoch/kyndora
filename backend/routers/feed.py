@@ -1,7 +1,7 @@
 import json
 import os
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from paho.mqtt import publish
 from sqlmodel import Session, or_, select
 
@@ -26,7 +26,10 @@ def format_mac(mac: str) -> str:
 
 @router.get("")
 def get_current_feed(
-    session: Session = Depends(get_session), current_user=Depends(get_current_user)
+    limit: int = Query(20, ge=1, le=50),
+    offset: int = Query(0, ge=0),
+    session: Session = Depends(get_session),
+    current_user=Depends(get_current_user),
 ):
     statement = (
         select(ContentFeed)
@@ -36,8 +39,9 @@ def get_current_feed(
                 ContentFeed.sender_id == current_user.id,
             )
         )
-        .order_by(ContentFeed.created_at.desc())
-        .limit(5)
+        .order_by(ContentFeed.created_at.desc(), ContentFeed.id.desc())
+        .offset(offset)
+        .limit(limit)
     )
 
     feed_items = session.exec(statement).all()
