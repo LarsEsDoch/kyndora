@@ -14,17 +14,26 @@ class FeedTab extends StatefulWidget {
 }
 
 class _FeedTabState extends State<FeedTab> {
-  List<dynamic> _feedItems = [];
+  static const int _pageSize = 20;
+
+  final ScrollController _scrollController = ScrollController();
+  final List<dynamic> _feedItems = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _requestGeneration = 0;
   StreamSubscription<Map<String, dynamic>>? _eventSubscription;
+
+  Map<String, String> get _authHeaders => {'Authorization': 'Bearer ${widget.token}'};
 
   @override
   void initState() {
     super.initState();
-    _fetchFeed();
+    _scrollController.addListener(_onScroll);
+    _refreshFeed();
     _eventSubscription = RealtimeService.instance.events.listen((event) {
       if (event['type'] == 'feed_updated' && mounted) {
-        _fetchFeed();
+        _refreshFeed();
       }
     });
   }
@@ -32,22 +41,72 @@ class _FeedTabState extends State<FeedTab> {
   @override
   void dispose() {
     _eventSubscription?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchFeed() async {
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 300) {
+      _loadMore();
+    }
+  }
+
+  Future<List<dynamic>> _fetchPage(int offset) async {
+    final response = await http.get(
+      Uri.parse('$backendUrl/api/feed?limit=$_pageSize&offset=$offset'),
+      headers: _authHeaders,
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Feed request failed (${response.statusCode})');
+    }
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
+  Future<void> _refreshFeed() async {
+    final generation = ++_requestGeneration;
     try {
-      final response = await http.get(
-        Uri.parse('$backendUrl/api/feed'),
-        headers: {'Authorization': 'Bearer ${widget.token}'},
-      );
-      if (response.statusCode == 200) {
-        setState(() => _feedItems = jsonDecode(response.body));
-      }
+      final page = await _fetchPage(0);
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() {
+        _feedItems
+          ..clear()
+          ..addAll(page);
+        _hasMore = page.length == _pageSize;
+        _isLoadingMore = false;
+      });
     } catch (e) {
-      throw Exception(e);
+      if (mounted && generation == _requestGeneration) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load feed: $e')));
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+
+    final generation = _requestGeneration;
+    setState(() => _isLoadingMore = true);
+    try {
+      final page = await _fetchPage(_feedItems.length);
+      if (!mounted || generation != _requestGeneration) return;
+      setState(() {
+        _feedItems.addAll(page);
+        _hasMore = page.length == _pageSize;
+      });
+    } catch (e) {
+      if (mounted && generation == _requestGeneration) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not load more: $e')));
+      }
+    } finally {
+      if (mounted && generation == _requestGeneration) {
+        setState(() => _isLoadingMore = false);
+      }
     }
   }
 
@@ -56,14 +115,30 @@ class _FeedTabState extends State<FeedTab> {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
     return RefreshIndicator(
-      onRefresh: _fetchFeed,
+      onRefresh: _refreshFeed,
       child: _feedItems.isEmpty
-          ? const Center(child: Text("No messages yet."))
+          ? ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 200),
+          Center(child: Text("No messages yet.")),
+        ],
+      )
           : ListView.builder(
-        itemCount: _feedItems.length,
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        itemCount: _feedItems.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
+          if (index >= _feedItems.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
           final item = _feedItems[index];
           final isDoodle = item['content_type'] == 'doodle';
+          final isDisplayed = item['is_displayed'] == true;
 
           return Card(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -80,6 +155,13 @@ class _FeedTabState extends State<FeedTab> {
                         isDoodle ? "Daily Doodle" : "Message",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
+                      if (isDisplayed) ...[
+                        const SizedBox(width: 8),
+                        const Tooltip(
+                          message: 'Shown on the display',
+                          child: Icon(Icons.visibility, size: 18, color: Colors.green),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 12),
