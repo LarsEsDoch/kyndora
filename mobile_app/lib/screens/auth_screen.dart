@@ -24,10 +24,27 @@ class _AuthWrapperState extends State<AuthWrapper> {
     _checkToken();
   }
 
+  bool _isTokenExpired(String token) {
+    try {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(token.split('.')[1]))),
+      );
+      final exp = payload['exp'] as int;
+      return DateTime.now().millisecondsSinceEpoch ~/ 1000 >= exp;
+    } catch (_) {
+      return true;
+    }
+  }
+
   Future<void> _checkToken() async {
     final prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString('user_jwt');
+    if (token != null && _isTokenExpired(token)) {
+      await prefs.remove('user_jwt');
+      token = null;
+    }
     setState(() {
-      _token = prefs.getString('user_jwt');
+      _token = token;
       _isLoading = false;
     });
   }
