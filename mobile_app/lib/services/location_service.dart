@@ -52,6 +52,7 @@ Future<void> sendCurrentLocation() async {
   }
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     await sendCurrentLocation();

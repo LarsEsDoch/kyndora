@@ -3,13 +3,15 @@ import 'package:kyndora/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb) {
-    initLocationBackgroundTask();
+  try {
+    if (!kIsWeb) await initLocationBackgroundTask();
+  } catch (e) {
+    debugPrint('Workmanager init failed: $e');
   }
-  sendCurrentLocation();
   runApp(const KyndoraApp());
+  sendCurrentLocation();
 }
 
 class KyndoraApp extends StatelessWidget {
