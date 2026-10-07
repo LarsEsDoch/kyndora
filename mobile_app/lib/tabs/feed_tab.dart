@@ -152,7 +152,7 @@ class _FeedTabState extends State<FeedTab> {
                       Icon(isDoodle ? Icons.draw : Icons.message, color: Colors.blueGrey),
                       const SizedBox(width: 8),
                       Text(
-                        isDoodle ? "Daily Doodle" : "Message",
+                        "${isDoodle ? "Daily Doodle" : "Message"} (${item['direction'] ?? 'unknown'})",
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       if (isDisplayed) ...[
