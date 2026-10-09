@@ -21,6 +21,7 @@ class _PartnerTabState extends State<PartnerTab> {
   String? _partnerMood;
   bool _partnerIsSleeping = false;
   String? _partnerReturnTime;
+  DateTime? _partnerLastSeenAt;
   final _usernameController = TextEditingController();
   StreamSubscription<Map<String, dynamic>>? _eventSubscription;
 
@@ -50,6 +51,34 @@ class _PartnerTabState extends State<PartnerTab> {
     super.dispose();
   }
 
+  DateTime? parseUtcToLocal(dynamic rawDate) {
+    if (rawDate == null) return null;
+    final parsed = DateTime.tryParse(rawDate.toString());
+    return parsed?.toLocal();
+  }
+
+  String _formatLastSeen(DateTime? lastSeen) {
+    if (lastSeen == null) return 'unknown';
+    final now = DateTime.now();
+    final diff = now.difference(lastSeen);
+
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+
+    final hourStr = lastSeen.hour.toString().padLeft(2, '0');
+    final minuteStr = lastSeen.minute.toString().padLeft(2, '0');
+    final isToday = lastSeen.year == now.year &&
+        lastSeen.month == now.month &&
+        lastSeen.day == now.day;
+
+    if (isToday) {
+      return 'today at $hourStr:$minuteStr';
+    }
+    final dayStr = lastSeen.day.toString().padLeft(2, '0');
+    final monthStr = lastSeen.month.toString().padLeft(2, '0');
+    return '$dayStr.$monthStr. at $hourStr:$minuteStr';
+  }
+
   Future<void> _checkPartnerStatus() async {
     setState(() => _isLoading = true);
     try {
@@ -66,6 +95,7 @@ class _PartnerTabState extends State<PartnerTab> {
             _partnerMood = data['mood'];
             _partnerIsSleeping = data['is_sleeping'] ?? false;
             _partnerReturnTime = data['return_time'];
+            _partnerLastSeenAt = parseUtcToLocal(data['last_seen_at']);
           }
         });
       }
@@ -401,11 +431,23 @@ class _PartnerTabState extends State<PartnerTab> {
         children: [
           Card(
             child: ListTile(
+              isThreeLine: true,
               leading: const Icon(Icons.favorite, color: Colors.pink),
               title: Text(_partnerUsername ?? 'Partner'),
-              subtitle: Text(_partnerIsSleeping
-                  ? 'Sleeping'
-                  : (_partnerMood != null ? 'Feeling $_partnerMood' : 'No status yet')),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _partnerIsSleeping
+                        ? 'Sleeping'
+                        : (_partnerMood != null ? 'Feeling $_partnerMood' : 'No status yet'),
+                  ),
+                  Text(
+                    'Last seen: ${_formatLastSeen(_partnerLastSeenAt)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
