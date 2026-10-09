@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 sqlmodel
-psycopg2-binary
 python-dotenv
 argon2-cffi
 PyJWT
@@ -15,6 +14,6 @@ httpx
 starlette
 firebase-admin
 pywebpush
-psycopg
+psycopg[binary]
 ruff
 pytest
