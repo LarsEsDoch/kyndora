@@ -2,6 +2,7 @@ import 'package:kyndora/screens/auth_screen.dart';
 import 'package:kyndora/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:kyndora/services/online_status_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,7 @@ Future<void> main() async {
   }
   runApp(const KyndoraApp());
   sendCurrentLocation();
+  sendOnlineStatus();
 }
 
 class KyndoraApp extends StatelessWidget {
