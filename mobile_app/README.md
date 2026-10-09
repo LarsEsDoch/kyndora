@@ -1,6 +1,6 @@
 # Kyndora
 
-The offical Kyndora App
+The official Kyndora App
 
 ## Getting Started
 
