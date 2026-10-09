@@ -225,6 +225,7 @@ def get_partner_status(
         "is_sleeping": partner.is_sleeping,
         "status_updated_at": partner.status_updated_at,
         "return_time": partner.return_time,
+        "last_seen_at": partner.last_seen_at,
     }
 
 
@@ -284,6 +285,17 @@ def set_return_time(
         )
 
     return {"status": "success", "message": "Return time updated."}
+
+@router.post("/last-seen-at")
+def set_last_seen_at(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.last_seen_at = datetime.now(timezone.utc)
+    session.add(current_user)
+    session.commit()
+
+    return {"status": "success", "message": "Last seen at updated."}
 
 
 @router.get("/quotes")

@@ -26,6 +26,8 @@ class User(SQLModel, table=True):
 
     return_time: datetime | None = Field(default=None)
 
+    last_seen_at: datetime | None = Field(default=None)
+
 
 class Device(SQLModel, table=True):
     __tablename__ = "devices"
