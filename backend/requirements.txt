@@ -15,3 +15,6 @@ httpx
 starlette
 firebase-admin
 pywebpush
+psycopg
+ruff
+pytest
