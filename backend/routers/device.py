@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -132,7 +132,7 @@ def update_device_settings(
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(settings, key, value)
-    settings.updated_at = datetime.now(timezone.utc)
+    settings.updated_at = datetime.now(UTC)
 
     session.add(settings)
     session.commit()
@@ -199,9 +199,9 @@ def register_device(
 
     expires_at = ticket.expires_at
     if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
 
-    if expires_at < datetime.now(timezone.utc):
+    if expires_at < datetime.now(UTC):
         session.delete(ticket)
         session.commit()
         raise HTTPException(status_code=400, detail="Ticket has expired")

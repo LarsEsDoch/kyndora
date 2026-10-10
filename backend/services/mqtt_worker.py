@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import paho.mqtt.client as mqtt
 from sqlmodel import Session, select
@@ -46,7 +46,7 @@ def on_message(client, userdata, msg):
                 device = session.get(Device, db_mac)
                 if device:
                     device.status = payload_raw
-                    device.last_seen_at = datetime.now(timezone.utc)
+                    device.last_seen_at = datetime.now(UTC)
                     session.add(device)
                     session.commit()
 
@@ -61,7 +61,7 @@ def on_message(client, userdata, msg):
                         device.battery_level = payload.get(
                             "battery_level", device.battery_level
                         )
-                        device.last_seen_at = datetime.now(timezone.utc)
+                        device.last_seen_at = datetime.now(UTC)
                         session.add(device)
                         session.commit()
 
@@ -106,7 +106,9 @@ def on_message(client, userdata, msg):
                         ).first()
 
                         if partner_device:
-                            partner_mac = partner_device.mac_address.replace(":", "").upper()
+                            partner_mac = partner_device.mac_address.replace(
+                                ":", ""
+                            ).upper()
                             client.publish(
                                 f"kyndora/{partner_mac}/commands",
                                 json.dumps({"command": "miss_you"}),

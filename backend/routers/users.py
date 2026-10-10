@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
@@ -20,7 +20,7 @@ def update_location(
 ):
     current_user.latitude = data.latitude
     current_user.longitude = data.longitude
-    current_user.location_updated_at = datetime.now(timezone.utc)
+    current_user.location_updated_at = datetime.now(UTC)
 
     session.add(current_user)
     session.commit()

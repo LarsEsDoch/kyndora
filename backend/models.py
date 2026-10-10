@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
 from sqlalchemy import JSON
@@ -67,7 +67,7 @@ class DeviceSettings(SQLModel, table=True):
     update_hour: int = Field(default=3)
     update_minute: int = Field(default=0)
 
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class MorningQuoteSettings(SQLModel, table=True):
@@ -76,7 +76,7 @@ class MorningQuoteSettings(SQLModel, table=True):
     wake_hour: int = Field(default=7)
     wake_minute: int = Field(default=0)
     quotes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ProvisioningTicket(SQLModel, table=True):
@@ -86,7 +86,7 @@ class ProvisioningTicket(SQLModel, table=True):
     )
     user_id: UUID = Field(foreign_key="users.id")
     expires_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc) + timedelta(minutes=15)
+        default_factory=lambda: datetime.now(UTC) + timedelta(minutes=15)
     )
 
 
@@ -96,7 +96,7 @@ class PartnerRequest(SQLModel, table=True):
     sender_id: UUID = Field(foreign_key="users.id")
     receiver_id: UUID = Field(foreign_key="users.id")
     status: str = Field(default="pending")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ContentFeed(SQLModel, table=True):
@@ -107,7 +107,7 @@ class ContentFeed(SQLModel, table=True):
     content_type: str
     payload: str
     is_displayed: bool = Field(default=False)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class Telemetry(SQLModel, table=True):
@@ -120,9 +120,7 @@ class Telemetry(SQLModel, table=True):
     core_temp: float | None = None
     battery_v: float | None = None
     battery_percent: int | None = None
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), index=True
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC), index=True)
 
 
 class PushToken(SQLModel, table=True):
@@ -131,4 +129,4 @@ class PushToken(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id", index=True)
     platform: str
     token: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

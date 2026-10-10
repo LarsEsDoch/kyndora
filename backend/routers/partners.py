@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from paho.mqtt import publish
@@ -238,7 +238,7 @@ def update_mood(
 ):
     current_user.mood = data.mood
     current_user.is_sleeping = data.is_sleeping
-    current_user.status_updated_at = datetime.now(timezone.utc)
+    current_user.status_updated_at = datetime.now(UTC)
     session.add(current_user)
     session.commit()
 
@@ -286,12 +286,13 @@ def set_return_time(
 
     return {"status": "success", "message": "Return time updated."}
 
+
 @router.post("/last-seen-at")
 def set_last_seen_at(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    current_user.last_seen_at = datetime.now(timezone.utc)
+    current_user.last_seen_at = datetime.now(UTC)
     session.add(current_user)
     session.commit()
 
@@ -322,7 +323,7 @@ def set_morning_quotes(
     settings.wake_hour = data.wake_hour
     settings.wake_minute = data.wake_minute
     settings.quotes = data.quotes
-    settings.updated_at = datetime.now(timezone.utc)
+    settings.updated_at = datetime.now(UTC)
 
     session.add(settings)
     session.commit()
