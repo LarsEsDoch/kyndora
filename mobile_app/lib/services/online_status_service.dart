@@ -11,7 +11,7 @@ Future<void> sendOnlineStatus() async {
   try {
 
     await http.post(
-      Uri.parse('$backendUrl/api/users/location'),
+      Uri.parse('$backendUrl/api/partners/last-seen-at'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
